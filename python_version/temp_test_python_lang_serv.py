@@ -4,6 +4,7 @@ import numpy as np
 from numpy import cos, sin
 import matplotlib.pyplot as plt
 from matplotlib import collections as mc
+from mpl_toolkits.mplot3d import Axes3D
 
 
 class node(object):
@@ -103,10 +104,9 @@ def vizualize_space_time(space_time, radius=5):
             h = 0
             cyl_coord_dict[n] = [theta, h]
 
-
     for n in space_time.nodes:
         if n.time_index != 0:
-            theta = np.mean([cyl_coord_dict[n][0] for theta in n.past])
+            theta = np.mean([cyl_coord_dict[past][0] for past in n.past])
             h = n.time_index
             cyl_coord_dict[n] = [theta, h]
 
@@ -117,8 +117,21 @@ def vizualize_space_time(space_time, radius=5):
         h = cyl_coord_dict[n][1]
         cart_coord_dict[n] = [radius*cos(theta), radius*sin(theta), h]
 
+    x_coords = []
+    y_coords = []
+    z_coords = []
 
-simple_st = make_flat_spacetime(16, 8)
+    for n in space_time.nodes:
+        x_coords.append(cart_coord_dict[n][0])
+        y_coords.append(cart_coord_dict[n][1])
+        z_coords.append(cart_coord_dict[n][2])
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    ax.scatter(x_coords, y_coords, z_coords)
+    plt.show()
+
+simple_st = make_flat_spacetime(8, 4)
 
 vizualize_space_time(simple_st)
 # vizualization test
@@ -162,5 +175,5 @@ ax.add_collection(lc)
 ax.autoscale()
 ax.margins(0.1)
 
-plt.plot(x_coords, y_coords, "r.")
-plt.show()
+#plt.plot(x_coords, y_coords, "r.")
+#plt.show()
