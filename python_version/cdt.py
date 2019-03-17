@@ -39,19 +39,66 @@ class space_time(object):
         return self.nodes[global_index]
 
     def move(self):
+        """inserts a new node to the right of a random node"""
+
+        # selects a random node and a random future and past edge to be split
         random_node = np.random.choice(self.nodes)
-        random_future_edge = np.random.choice(random_node.future)
-        random_past_edge = np.random.choice(random_node.future)
+        random_future_node = np.random.choice(random_node.future)
+        random_past_node = np.random.choice(random_node.past)
+
+        new_node = node(self, None, random_node.time_index)
+
+        # splits the set of future nodes in two
+        future_left = [random_future_node]
+        future_right = [random_future_node]
+        n = random_future_node.right
+        while n in random_node.future:
+            future_right.append(n)
+            n = n.right
+        future_left += list(set(random_node.future) - set(future_right))
+
+        # assigns the two halfs to the new node and the random node
+        new_node.future = future_right
+        random_node.future = future_left
+
+        # splits the set of past nodes in two
+        past_left = [random_past_node]
+        past_right = [random_past_node]
+        n = random_past_node.right
+        while n in random_node.past:
+            future_right.append(n)
+            n = n.right
+        future_left += list(set(random_node.past) - set(past_right))
+
+        # assigns the two halfs to the new node and the random node
+        new_node.past = past_right
+        random_node.past = past_left
+
+        # corrects the spatial connections of the new node and the random node
+        new_node.right = random_node.right
+        new_node.left = random_node
+        random_node.right.left = new_node
+        random_node.right = new_node
+
+        self.nodes.append(new_node)
 
     def inverse_move(self):
 
         random_node = np.random.choice(self.nodes)
-        new_node = node(self, None, None)
+        new_node = node(self, None, random_node.time_index)
 
         new_node.left = random_node.left
         new_node.right = random_node.right.right
-        new_node.past = np.union1d(random_node.past, random_node.right.past)
-        new_node.future = np.union1d(random_node.future, random_node.right.future)
+        new_node.past = np.append(random_node.past, random_node.right.past)
+        # new_node.past = np.unique(new_node.past)
+        new_node.future = np.append(random_node.future, random_node.right.future)
+        # new_node.future = np.unique(new_node.future)
+
+        for n in new_node.future:
+            np.where(n.past == random_node, new_node, n.past)
+
+        for n in new_node.past:
+            np.where(n.future == random_node, new_node, n.future)
 
         self.nodes.remove(random_node)
         self.nodes.remove(random_node.right)
@@ -96,7 +143,7 @@ def vizualize_space_time(space_time, radius=5):
     num_nodes_in_space_slice = space_time.space_slice_sizes[0]
 
     n = space_time.nodes[0]
-    d_theta = 2*np.pi/num_nodes_in_space_slice
+    d_theta = 2 * np.pi / num_nodes_in_space_slice
     theta = 0
     for n in space_time.nodes:
         if n.time_index == 0:
@@ -104,18 +151,24 @@ def vizualize_space_time(space_time, radius=5):
             h = 0
             cyl_coord_dict[n] = [theta, h]
 
-    for n in space_time.nodes:
-        if n.time_index != 0:
-            theta = np.mean([cyl_coord_dict[past][0] for past in n.past])
-            h = n.time_index
-            cyl_coord_dict[n] = [theta, h]
+    for time_index in range(1, space_time.num_time_slices):
+        for n in space_time.nodes:
+            if n.time_index == time_index:
+                past_angles = [cyl_coord_dict[past][0] for past in n.past]
+                theta = np.arctan2(
+                    1 / len(n.past) * np.sum(sin(past_angles)),
+                    1 / len(n.past) * np.sum(cos(past_angles)),
+                )
+                # theta = np.mean([cyl_coord_dict[past][0] for past in n.past])
+                h = n.time_index
+                cyl_coord_dict[n] = [theta, h]
 
     cart_coord_dict = {}
 
     for n in space_time.nodes:
         theta = cyl_coord_dict[n][0]
         h = cyl_coord_dict[n][1]
-        cart_coord_dict[n] = [radius*cos(theta), radius*sin(theta), h]
+        cart_coord_dict[n] = [radius * cos(theta), radius * sin(theta), h]
 
     x_coords = []
     y_coords = []
@@ -127,53 +180,12 @@ def vizualize_space_time(space_time, radius=5):
         z_coords.append(cart_coord_dict[n][2])
 
     fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
+    ax = fig.add_subplot(111, projection="3d")
     ax.scatter(x_coords, y_coords, z_coords)
     plt.show()
 
-simple_st = make_flat_spacetime(8, 4)
 
+simple_st = make_flat_spacetime(32, 16)
+for i in range(100):
+    simple_st.move()
 vizualize_space_time(simple_st)
-# vizualization test
-
-x_coords = []
-y_coords = []
-lines = []
-for n in simple_st.nodes:
-    x = 2 * n.space_index
-    y = 2 * n.time_index
-
-    x1 = 2 * n.right.space_index
-    y1 = 2 * n.right.time_index
-
-    x2 = 2 * n.future[1].space_index
-    y2 = 2 * n.future[1].time_index
-
-    x3 = 2 * n.future[0].space_index
-    y3 = 2 * n.future[0].time_index
-
-    x4 = 2 * n.past[1].space_index
-    y4 = 2 * n.past[1].time_index
-
-    x5 = 2 * n.past[0].space_index
-    y5 = 2 * n.past[0].time_index
-
-    offset = .1
-    lines.append([(x, y), (x1, y1)])
-    lines.append([(x, y), (x1, y1)])
-    lines.append([(x, y), (x2, y2)])
-    lines.append([(x, y), (x3, y3)])
-    lines.append([(x, y), (x4, y4)])
-    lines.append([(x, y), (x5, y5)])
-
-    x_coords.append(x)
-    y_coords.append(y)
-
-lc = mc.LineCollection(lines, linewidths=2)
-fig, ax = plt.subplots()
-ax.add_collection(lc)
-ax.autoscale()
-ax.margins(0.1)
-
-#plt.plot(x_coords, y_coords, "r.")
-#plt.show()
