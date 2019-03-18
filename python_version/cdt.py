@@ -1,14 +1,28 @@
-"""consider removing node spatial index and node time index, i believe they are only needed for falt space time intiailization"""
-
 import numpy as np
 from numpy import cos, sin
 import matplotlib.pyplot as plt
 from matplotlib import collections as mc
 from mpl_toolkits.mplot3d import Axes3D
 
+"""consider removing node spatial index and node time index, i believe they are only needed for falt space time intiailization"""
+"""https://stackoverflow.com/questions/472000/usage-of-slots"""
+
+
+"""still not working, nodes not in space_)time are left in past, if running many moves all nodes concetrate along a small subsection of the bottom ring"""
+
 
 class node(object):
-    """docstring for node."""
+    """The base structur"""
+
+    __slots__ = [
+        "space_time",
+        "space_index",
+        "time_index",
+        "future",
+        "past",
+        "left",
+        "right",
+    ]
 
     def __init__(self, space_time, space_index, time_index):
         self.future = []
@@ -19,6 +33,10 @@ class node(object):
         self.time_index = time_index
         self.space_time = space_time
 
+    def __repr__(self):
+
+        return "node" + str((self.space_index, self.time_index))
+
     def global_index(self):
         sss = self.space_time.space_slice_sizes
         return np.sum(sss[: self.time_index]) + self.space_index
@@ -27,6 +45,8 @@ class node(object):
 class space_time(object):
     """docstring for space_time."""
 
+    __slots__ = ["nodes", "space_slice_sizes", "num_time_slices"]
+
     def __init__(self, space_slice_sizes, n_time_slices):
         super(space_time, self).__init__()
         self.nodes = []
@@ -34,8 +54,7 @@ class space_time(object):
         self.num_time_slices = n_time_slices
 
     def get_node(self, space_index, time_index):
-        sss = self.space_slice_sizes
-        global_index = np.sum(sss[:time_index]) + space_index
+        global_index = np.sum(self.space_slice_sizes[:time_index]) + space_index
         return self.nodes[global_index]
 
     def move(self):
@@ -46,7 +65,8 @@ class space_time(object):
         random_future_node = np.random.choice(random_node.future)
         random_past_node = np.random.choice(random_node.past)
 
-        new_node = node(self, None, random_node.time_index)
+        random_node.space_index = "left split node"
+        new_node = node(self, "right split node", random_node.time_index)
 
         # splits the set of future nodes in two
         future_left = [random_future_node]
@@ -66,9 +86,9 @@ class space_time(object):
         past_right = [random_past_node]
         n = random_past_node.right
         while n in random_node.past:
-            future_right.append(n)
+            past_right.append(n)
             n = n.right
-        future_left += list(set(random_node.past) - set(past_right))
+        past_left += list(set(random_node.past) - set(past_right))
 
         # assigns the two halfs to the new node and the random node
         new_node.past = past_right
@@ -81,28 +101,51 @@ class space_time(object):
         random_node.right = new_node
 
         self.nodes.append(new_node)
+        self.space_slice_sizes[new_node.time_index] += 1
 
     def inverse_move(self):
+        """ merges random_node with random_node.right"""
 
         random_node = np.random.choice(self.nodes)
-        new_node = node(self, None, random_node.time_index)
+        new_node = node(self, "merged node", random_node.time_index)
 
+        # the list set thing forces uniquness
         new_node.left = random_node.left
         new_node.right = random_node.right.right
-        new_node.past = np.append(random_node.past, random_node.right.past)
-        # new_node.past = np.unique(new_node.past)
-        new_node.future = np.append(random_node.future, random_node.right.future)
-        # new_node.future = np.unique(new_node.future)
 
+        new_node.past = np.append(random_node.past, random_node.right.past)
+        new_node.past = list(set(new_node.past))
+
+        new_node.future = np.append(random_node.future, random_node.right.future)
+        new_node.future = list(set(new_node.future))
+
+        # currently this isnt removing random node from the past of new nodes future
+
+        # print(new_node)
         for n in new_node.future:
-            np.where(n.past == random_node, new_node, n.past)
+            #    print(n)
+            #    print(n.past)
+            n.past = [
+                n if (n != random_node and n != random_node.right) else new_node
+                for n in n.past
+            ]
+            n.past = list(set(n.past))
 
         for n in new_node.past:
-            np.where(n.future == random_node, new_node, n.future)
+            n.future = [
+                n if (n != random_node and n != random_node.right) else new_node
+                for n in n.future
+            ]
+            n.future = list(set(n.future))
+
+        random_node.left.right = new_node
+        random_node.right.right.left = new_node
 
         self.nodes.remove(random_node)
         self.nodes.remove(random_node.right)
         self.nodes.append(new_node)
+        self.space_slice_sizes[new_node.time_index] -= 1
+        # print(new_node)
 
 
 def make_flat_spacetime(n_space_slices, n_time_slices):
@@ -142,11 +185,11 @@ def vizualize_space_time(space_time, radius=5):
     # there should be a better way to select out nodes with a certain property
     num_nodes_in_space_slice = space_time.space_slice_sizes[0]
 
-    n = space_time.nodes[0]
     d_theta = 2 * np.pi / num_nodes_in_space_slice
     theta = 0
     for n in space_time.nodes:
         if n.time_index == 0:
+            # this only works if the 0 level nodes are ordered
             theta += d_theta
             h = 0
             cyl_coord_dict[n] = [theta, h]
@@ -154,12 +197,15 @@ def vizualize_space_time(space_time, radius=5):
     for time_index in range(1, space_time.num_time_slices):
         for n in space_time.nodes:
             if n.time_index == time_index:
-                past_angles = [cyl_coord_dict[past][0] for past in n.past]
+                past_angles = []
+                for past in n.past:
+                    print(n)
+                    past_angles.append(cyl_coord_dict[past][0])
+                # past_angles = [cyl_coord_dict[past][0] for past in n.past]
                 theta = np.arctan2(
                     1 / len(n.past) * np.sum(sin(past_angles)),
                     1 / len(n.past) * np.sum(cos(past_angles)),
                 )
-                # theta = np.mean([cyl_coord_dict[past][0] for past in n.past])
                 h = n.time_index
                 cyl_coord_dict[n] = [theta, h]
 
@@ -186,6 +232,8 @@ def vizualize_space_time(space_time, radius=5):
 
 
 simple_st = make_flat_spacetime(32, 16)
-for i in range(100):
+
+for i in range(1100):
     simple_st.move()
+
 vizualize_space_time(simple_st)
