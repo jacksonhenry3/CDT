@@ -1,22 +1,42 @@
+# pretty sure all of this importing  is unnsescsary
 from initialization import make_flat_spacetime
-from vizualization import vizualize_space_time, vizualize_space_time_flattened
 import numpy as np
-import matplotlib.pyplot as plt
+from space_time import space_time
+from copy import deepcopy as copy
 
 
 def p_of_move_imove(st, n, gamma_prime):
-    n_v = len(st.nodes)
+    """
+    This function calculates the probability of making a particular move and the
+    corosponding inverse move.
+
+    it takes as argument a space time, a node within that space time,
+    and modified cosmological constant
+    """
+
+    """
+    I believe there is a problem here with the probabilities.
+    The probability used here is the probability of specifically undoing the
+    forward move. BUt is that what is calcuated here? It could have to do with
+    the node selection and the fact the inverse move always merges right?.
+    """
+
+    # number of nodes in the space time
+    n_n = len(st.nodes)
+
+    # number of past edges of the specified node
     n_p = len(n.past)
+
+    # number of future edges of the specified node
     n_f = len(n.future)
 
-    # l = 1
-    # am = l ** 2 * np.sqrt(5) / 4
-    # this is not the real value of gamma. I should probs get it in natural untis
-    # gamma = 10 ** (-52)
-    # gamma_prime = gamma * am / (8 * np.pi) * np.sqrt(3 / 5)
-    # gamma_prime = 0.6
-    non_normd_prob_move = n_v / (n_v + 1) * (n_p * n_f) * np.e ** (-1 * gamma_prime)
+    # these proabbilities are given by equation israel et al 37 and 38
+    non_normd_prob_move = n_n / (n_n + 1) * (n_p * n_f) * np.e ** (-1 * gamma_prime)
     non_normd_prob_imove = np.e ** gamma_prime
+
+    # normalize the probabilities so that they are less than one.
+    # this step isnt explicitly described in any papers i have encountered,
+    # it is possible that the n_p' and n_f' in israel et al is normalization.
     normd_prob_move = non_normd_prob_move / (non_normd_prob_move + non_normd_prob_imove)
     normd_prob_imove = non_normd_prob_imove / (
         non_normd_prob_move + non_normd_prob_imove
@@ -24,146 +44,91 @@ def p_of_move_imove(st, n, gamma_prime):
     return [normd_prob_move, normd_prob_imove]
 
 
-def chose_random_vertex(space_time):
-    num_nodes = np.sum(space_time.space_slice_sizes)
-    random_node_list_index = np.random.randint(num_nodes)
-    random_index = list(space_time.nodes.keys())[random_node_list_index]
-    return space_time.nodes[random_index]
+def one_iteration(st, gamma_prime):
+    """
+    This function does one iteration of the monte carlo simulation
+    it takes as argument a space time and a cosmological constant
+    """
+
+    # select a random vertex and figure out how likely a move or inverse move on
+    # the given vertex is
+    random_vertex = st.get_random_node()
+    p_move, p_imove = p_of_move_imove(st, random_vertex, gamma_prime)
+
+    r1 = np.random.random()
+    r2 = np.random.random()
+
+    moveq, imoveq = p_move > r1, p_imove > r2
+
+    # if both a move and inverse move would be accepted instead do nothing.
+    if moveq and imoveq > r2:
+        return
+
+    if moveq:
+        st.move(random_vertex)
+
+    if imoveq:
+        st.inverse_move(random_vertex)
 
 
-def run(initial_universe, total_num_moves):
+def run(st, num_moves, gamma_prime, debug=False, debug_interval=1000):
+    """
+        Does num_moves iterations modifying st. If debug is True then progress
+        is printed and the state of the universe is recorderd every
+        debug_interval iterations.
+    """
 
-    initial_universe_size = np.sum(initial_universe.space_slice_sizes)
-    number_moves = 0
-    number_imoves = 0
+    """
+    I would like to be able to record the full state of the unviverse each debug
+    interval but i am having problems copying the state properly.
+    """
+    st_history = [st]
 
-    p_move_history = []
-    p_imove_history = []
-
+    # i was told there is something better than a try except here but i dont
+    # remember what it was
     try:
-        for i in range(total_num_moves):
+        # do num_moves iterations on st.
+        for i in range(num_moves):
+            one_iteration(st, gamma_prime)
 
-            random_vertex = chose_random_vertex(initial_universe)
-            p_move, p_imove = p_of_move_imove(
-                initial_universe, random_vertex, gamma_prime
-            )
+            # if debugging is turned on and we have reached the debug interval
+            if debug and i % debug_interval == 0:
+                # print the percent complete.
+                print(np.round(float(i) / num_moves * 100.0, decimals=2))
+                # print(str(i) + "-----" + str(st.space_slice_sizes))
 
-            r1 = np.random.random()
-            r2 = np.random.random()
-
-            if p_move > r1:
-                number_moves += 1
-                initial_universe.move(random_vertex)
-
-            if p_imove > r2:
-                number_imoves += 1
-                initial_universe.inverse_move(random_vertex)
-
-            p_move_history.append(p_move)
-            p_imove_history.append(p_imove)
-
-            if i % 100 == 0:
-                universe_size = np.sum(initial_universe.space_slice_sizes)
-
-                if universe_size > 10000:
-                    print("universe exploded")
-                    raise Exception(
-                        "Universe size exceeded reasonable simulation parameter of 10000"
-                    )
-                gamma_history.append(gamma_prime)
-                universe_size_history.append(universe_size)
-
+                st_history.append(st)
                 """
-                gamma_prime = modify_gamma_prime_based_on_move_probability(
-                    gamma_prime, p_move_history, p_imove_history
+                This is where i would like to copy the current state of the
+                space_time and put it in to st_history to be returned.
+                """
+
+            # if the unviverse gets to small throw an error
+            # add checks for to large aswell.
+            # are there any other checks you can do?
+            if np.min(st.space_slice_sizes) == 1:
+                raise ValueError(
+                    "The universe shrunk to a point at some particular time! "
                 )
-                """
-
-                """
-                gamma_prime = modify_gamma_prime_based_on_universe_Size(
-                    gamma_prime, universe_size, initial_universe_size
-                )
-                """
-
-                if i % 10000 == 0:
-                    print("gamma prime is " + str(gamma_prime))
-                    print(
-                        str(100 * i / total_num_moves)
-                        + ", spacetime size is : "
-                        + str(universe_size)
-                    )
-                    print()
-    except:
-        print("universe imploded (or other)")
-        pass
+    except Exception as e:
+        print("universe failed, " + str(e))
+        print(st.space_slice_sizes)
+    return st_history
 
 
-def modify_gamma_prime_based_on_move_probability(
-    gamma_prime, p_move_history, p_imove_history
-):
-    if np.mean(p_move_history) > 0.5:
-        print(np.mean(p_move_history))
-        gamma_prime += 0.05 * (np.mean(p_move_history) - 0.5)
-    p_move_history = []
-    if np.mean(p_imove_history) > 0.5:
-        print(np.mean(p_imove_history))
-        gamma_prime -= 0.05 * (np.mean(p_imove_history) - 0.5)
-    p_imove_history = []
-    return gamma_prime
-
-
-def modify_gamma_prime_based_on_universe_Size(
-    gamma_prime, universe_size, initial_universe_size
-):
-    sep = universe_size - initial_universe_size
-    gamma_prime += 0.05 * sep / 10000
-    return gamma_prime
-
-
-print("start")
-print()
-# for gamma_prime in np.linspace(0.52, 0.53, 4):
-for j in range(1):
-    gamma_prime = 0.5233333
-    fig, ax1 = plt.subplots()
-    # ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
-    for i in range(1):
-        simple_st = make_flat_spacetime(16, 8)
-        initial_size = np.sum(simple_st.space_slice_sizes)
-
-        gamma_history = []
-        universe_size_history = []
-
-        run(simple_st, 10 ** 6)
-
-        """
-        color = "tab:red"
-        ax1.set_xlabel("time (s)")
-        ax1.set_ylabel("gamma", color=color)
-        ax1.plot(gamma_history, color=color)
-        ax1.tick_params(axis="y", labelcolor=color)
-        """
-
-        # color = "tab:blue"
-        ax1.set_ylabel(
-            "size"
-        )  # , color=color)  # we already handled the x-label with ax1
-        ax1.plot(np.array(universe_size_history) / initial_size)  # , color=color)
-        ax1.tick_params(axis="y")  # , labelcolor=color)
-
-        fig.tight_layout()  # otherwise the right y-label is slightly clipped
-        print("completed iteration " + str(i))
-
-    plt.title(
-        "Size history of the universe for effective cosmological constant "
-        + str(np.round(gamma_prime, 2))
-    )
-    ax1.set_xlim(0, 10 ** 4)
-    ax1.set_ylim(0, 10000.0 / initial_size)
-    plt.savefig("5_universe_histories_with_gamma_prime_" + str(gamma_prime) + ".svg")
-    print()
-
-vizualize_space_time_flattened(simple_st)
-# vizualize_space_time(simple_st)
-print()
-print("end")
+def do_sensemble(num_samples, num_iter, i_space_size, i_time_size, gamma_prime):
+    """
+        this runs num_samples universe each for num_iter iterations.
+        It takes as argument
+        the number of samples (int)
+        the number of iterations (int)
+        the spatial and time size of the unvierse (int)
+        a modified cosmological constant (float)
+        It returns a list of all the simulated unvierses.
+    """
+    ensemble = []
+    for i in range(num_samples):
+        st = make_flat_spacetime(i_space_size, i_time_size)
+        run(st, num_iter, gamma_prime, debug=False, debug_interval=10 ** 3)
+        ensemble.append(st)
+    return ensemble
