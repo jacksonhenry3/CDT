@@ -106,17 +106,50 @@ def get_rectangular_past_average_coordinates_2d(space_time):
                 past_x = []
                 for past_index, past_node in n.past.items():
                     past_x.append(coords_dict[past_node][0])
-                # x = np.mean(np.array(past_x)) - (1 + (-1) ** (n.time_index)) * 0.5
-                # if np.mean(np.abs(past_x - np.mean(x))) > 3:
-                #     x = 7 + (1 + (-1) ** (n.time_index - 1)) * 0.25
-                x = np.mean(np.array(past_x))
 
-                # this could potentialy be used to relocate nodes whos past is
-                # split between both sides of the plot
-                """
-                if np.mean(np.abs(past_x - np.mean(x))) > 3:
-                    x = 15 + 0.5 * n.time_index
-                """
+                past_x = np.sort(past_x)
+
+                # split the past in to sections in case the past nodes end up
+                # on opposite sides
+                g1 = [past_x[0]]
+
+                # get all past nodes that are on the left
+                for i in range(len(past_x) - 1):
+                    if (
+                        np.abs(past_x[i] - past_x[i + 1])
+                        <= min(space_time.space_slice_sizes) / 2.0
+                    ):
+                        g1.append(past_x[i + 1])
+                    else:
+                        break
+
+                # get all the remaining past nodes
+                g2 = [x for x in past_x if x not in g1]
+
+                lg1 = len(g1)
+                lg2 = len(g2)
+
+                # if the left and right are the same size alternate which side is used
+                if lg1 == lg2:
+                    if time_index % 2 == 0:
+                        lg1 += 1
+                    if time_index % 2 == 1:
+                        lg2 += 1
+
+                # if the left past is larger push the node left
+                if lg1 >= lg2:
+                    for x in g2:
+                        g1.append(x - (max(past_x) + 1) + min(past_x))
+                    g = g1
+
+                # if the right past is larger push the node right
+                elif lg2 >= lg1:
+                    for x in g1:
+                        g2.append(x + max(past_x) + 1)
+                    g = g2
+
+                x = np.mean(np.array(g))
+
                 y = n.time_index
                 coords_dict[n] = [x, y]
     return coords_dict
@@ -231,16 +264,19 @@ def get_circular_coordinates_2d(space_time, r0=1):
     return coords_dict
 
 
-def vizualize_space_time_2d(space_time):
+def vizualize_space_time_2d(space_time, seed):
+    np.random.seed(seed)
 
     # get the corodinate dictionairy
-    coord_dict = get_rectangular_naive_coordinates_2d(space_time)
+    coord_dict = get_rectangular_past_average_coordinates_2d(space_time)
 
     # find the minimum spatial size
     minSpaceSize = np.min(space_time.space_slice_sizes)
 
     fig = plt.figure()
+
     ax = fig.add_subplot(111)
+    ax.set_title(str(seed))
 
     # removes the past from zero level nodes
     # this should be unnescesary?
@@ -260,8 +296,8 @@ def vizualize_space_time_2d(space_time):
 
         # create a list of all adjacent nodes. I have chosen to include only the
         # right and future nodes so as not to double plot edges.
-        adjacent_nodes = list(n.future.values())
-        adjacent_nodes.append(n.left)
+        adjacent_nodes = list(n.past.values())
+        # adjacent_nodes.append(n.left)
 
         for adjacent_node in adjacent_nodes:
             adjacent_node_x = coord_dict[adjacent_node][0]
@@ -270,7 +306,7 @@ def vizualize_space_time_2d(space_time):
             # this wont plot deges that are to long (i.e longer than the
             # shortest spatial slice)
             if (this_x - adjacent_node_x) ** 2 + (this_y - adjacent_node_y) ** 2 < (
-                minSpaceSize - 1
+                minSpaceSize - 5
             ) ** 2:
                 ax.plot([this_x, adjacent_node_x], [this_y, adjacent_node_y], "Black")
 
@@ -278,6 +314,7 @@ def vizualize_space_time_2d(space_time):
     # for node, coord in coord_dict.items():
     #     ax.scatter(coord[0], coord[1])
 
+    # plt.savefig(str(seed) + ".png")
     plt.show()
     plt.close("all")
 
