@@ -9,7 +9,7 @@ class space_time(object):
      They also allow for ergotic forward and inverse moves
 
      fixes and optimizations:
-        1. The initialization should only require space_slice_sizes
+        1. The initialization should only require Figure_1space_slice_sizes
         2. get_node is only used for initialization, can this be removed?
      """
 

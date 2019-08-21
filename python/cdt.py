@@ -5,7 +5,7 @@ from space_time import space_time
 from copy import deepcopy as copy
 
 
-def p_of_move_imove(st, n, gamma_prime):
+def p_of_move_imove(st, n, lambda_prime):
     """
     This function calculates the probability of making a particular move and the
     corosponding inverse move.
@@ -31,20 +31,13 @@ def p_of_move_imove(st, n, gamma_prime):
     n_f = len(n.future)
 
     # these proabbilities are given by equation israel et al 37 and 38
-    non_normd_prob_move = n_n / (n_n + 1) * (n_p * n_f) * np.e ** (-1 * gamma_prime)
-    non_normd_prob_imove = np.e ** gamma_prime
+    prob_move = n_n / (n_n + 1) * (n_p * n_f) * np.e ** (-1 * lambda_prime) / 4.0
+    prob_imove = np.e ** lambda_prime / 4.0
 
-    # normalize the probabilities so that they are less than one.
-    # this step isnt explicitly described in any papers i have encountered,
-    # it is possible that the n_p' and n_f' in israel et al is normalization.
-    normd_prob_move = non_normd_prob_move / (non_normd_prob_move + non_normd_prob_imove)
-    normd_prob_imove = non_normd_prob_imove / (
-        non_normd_prob_move + non_normd_prob_imove
-    )
-    return [normd_prob_move, normd_prob_imove]
+    return [prob_move, prob_imove]
 
 
-def one_iteration(st, gamma_prime):
+def one_iteration(st, lambda_prime):
     """
     This function does one iteration of the monte carlo simulation
     it takes as argument a space time and a cosmological constant
@@ -53,7 +46,7 @@ def one_iteration(st, gamma_prime):
     # select a random vertex and figure out how likely a move or inverse move on
     # the given vertex is
     random_vertex = st.get_random_node()
-    p_move, p_imove = p_of_move_imove(st, random_vertex, gamma_prime)
+    p_move, p_imove = p_of_move_imove(st, random_vertex, lambda_prime)
 
     r1 = np.random.random()
     r2 = np.random.random()
@@ -71,7 +64,7 @@ def one_iteration(st, gamma_prime):
         st.inverse_move(random_vertex)
 
 
-def run(st, num_moves, gamma_prime, debug=False, debug_interval=1000):
+def run(st, num_moves, lambda_prime, debug=False, debug_interval=1000):
     """
         Does num_moves iterations modifying st. If debug is True then progress
         is printed and the state of the universe is recorderd every
@@ -82,14 +75,14 @@ def run(st, num_moves, gamma_prime, debug=False, debug_interval=1000):
     I would like to be able to record the full state of the unviverse each debug
     interval but i am having problems copying the state properly.
     """
-    st_history = [st]
+    st_history = [len(st.nodes)]
 
     # i was told there is something better than a try except here but i dont
     # remember what it was
     try:
         # do num_moves iterations on st.
         for i in range(num_moves):
-            one_iteration(st, gamma_prime)
+            one_iteration(st, lambda_prime)
 
             # if debugging is turned on and we have reached the debug interval
             if debug and i % debug_interval == 0:
@@ -97,7 +90,7 @@ def run(st, num_moves, gamma_prime, debug=False, debug_interval=1000):
                 print(np.round(float(i) / num_moves * 100.0, decimals=2))
                 # print(str(i) + "-----" + str(st.space_slice_sizes))
 
-                st_history.append(st)
+                st_history.append(len(st.nodes))
                 """
                 This is where i would like to copy the current state of the
                 space_time and put it in to st_history to be returned.
@@ -110,13 +103,17 @@ def run(st, num_moves, gamma_prime, debug=False, debug_interval=1000):
                 raise ValueError(
                     "The universe shrunk to a point at some particular time! "
                 )
+            if len(st.nodes) > 5 * 32 * 64:
+                raise ValueError(
+                    "The universe is to big and its slowing down the simulation "
+                )
     except Exception as e:
         print("universe failed, " + str(e))
         print(st.space_slice_sizes)
     return st_history
 
 
-def do_sensemble(num_samples, num_iter, i_space_size, i_time_size, gamma_prime):
+def do_sensemble(num_samples, num_iter, i_space_size, i_time_size, lambda_prime):
     """
         this runs num_samples universe each for num_iter iterations.
         It takes as argument
@@ -129,6 +126,6 @@ def do_sensemble(num_samples, num_iter, i_space_size, i_time_size, gamma_prime):
     ensemble = []
     for i in range(num_samples):
         st = make_flat_spacetime(i_space_size, i_time_size)
-        run(st, num_iter, gamma_prime, debug=False, debug_interval=10 ** 3)
+        run(st, num_iter, lambda_prime, debug=False, debug_interval=10 ** 3)
         ensemble.append(st)
     return ensemble

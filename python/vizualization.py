@@ -264,7 +264,7 @@ def get_circular_coordinates_2d(space_time, r0=1):
     return coords_dict
 
 
-def vizualize_space_time_2d(space_time, seed):
+def vizualize_space_time_2d(space_time, seed=0):
     np.random.seed(seed)
 
     # get the corodinate dictionairy
@@ -311,8 +311,8 @@ def vizualize_space_time_2d(space_time, seed):
                 ax.plot([this_x, adjacent_node_x], [this_y, adjacent_node_y], "Black")
 
     # this draws the nodes
-    # for node, coord in coord_dict.items():
-    #     ax.scatter(coord[0], coord[1])
+    for node, coord in coord_dict.items():
+        ax.scatter(coord[0], coord[1])
 
     # plt.savefig(str(seed) + ".png")
     plt.show()
