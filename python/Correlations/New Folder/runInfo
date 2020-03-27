@@ -1,0 +1,6 @@
+ensemble size 500
+x = 64
+t = 128
+iterations = 100000
+Lambda = 0.65
+run(st, 100000, 0.65, size_cutoff=int(64 * 128 * 0.5),max_size = int(64 * 128 * 2))

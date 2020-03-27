@@ -5,7 +5,7 @@ from space_time import space_time
 from copy import deepcopy as copy
 
 
-def p_of_move_imove(st, n, lambda_prime):
+def p_of_move_imove(st, n, lambda_prime, prob_divisor=4):
     """
     This function calculates the probability of making a particular move and the
     corosponding inverse move.
@@ -16,9 +16,7 @@ def p_of_move_imove(st, n, lambda_prime):
 
     """
     I believe there is a problem here with the probabilities.
-    The probability used here is the probability of specifically undoing the
-    forward move. BUt is that what is calcuated here? It could have to do with
-    the node selection and the fact the inverse move always merges right?.
+    prob divisor shouldn't effect the location of stability?
     """
 
     # number of nodes in the space time
@@ -31,13 +29,17 @@ def p_of_move_imove(st, n, lambda_prime):
     n_f = len(n.future)
 
     # these proabbilities are given by equation israel et al 37 and 38
-    prob_move = n_n / (n_n + 1) * (n_p * n_f) * np.e ** (-1 * lambda_prime) / 4.0
-    prob_imove = np.e ** lambda_prime / 4.0
+    prob_move = (
+        n_n / (n_n + 1) * (n_p * n_f) * np.e ** (-1 * lambda_prime) / prob_divisor
+    )
+    prob_imove = np.e ** lambda_prime / prob_divisor
+    # prob_move = 4 * np.e ** (-1 * lambda_prime) / prob_divisor
+    # prob_imove = np.e ** lambda_prime / prob_divisor
 
     return [prob_move, prob_imove]
 
 
-def one_iteration(st, lambda_prime):
+def one_iteration(st, lambda_prime, prob_divisor=4):
     """
     This function does one iteration of the monte carlo simulation
     it takes as argument a space time and a cosmological constant
@@ -46,7 +48,9 @@ def one_iteration(st, lambda_prime):
     # select a random vertex and figure out how likely a move or inverse move on
     # the given vertex is
     random_vertex = st.get_random_node()
-    p_move, p_imove = p_of_move_imove(st, random_vertex, lambda_prime)
+    p_move, p_imove = p_of_move_imove(
+        st, random_vertex, lambda_prime, prob_divisor=prob_divisor
+    )
 
     r1 = np.random.random()
     r2 = np.random.random()
@@ -64,7 +68,16 @@ def one_iteration(st, lambda_prime):
         st.inverse_move(random_vertex)
 
 
-def run(st, num_moves, lambda_prime, debug=False, debug_interval=1000):
+def run(
+    st,
+    num_moves,
+    lambda_prime,
+    debug=False,
+    debug_interval=1000,
+    max_size=3 * 32 * 64,
+    size_cutoff=0,
+    prob_divisor=4,
+):
     """
         Does num_moves iterations modifying st. If debug is True then progress
         is printed and the state of the universe is recorderd every
@@ -82,7 +95,11 @@ def run(st, num_moves, lambda_prime, debug=False, debug_interval=1000):
     try:
         # do num_moves iterations on st.
         for i in range(num_moves):
-            one_iteration(st, lambda_prime)
+
+            if len(st.nodes) == size_cutoff:
+                print(len(st.nodes))
+                raise ValueError("hit size cutoff")
+            one_iteration(st, lambda_prime, prob_divisor=prob_divisor)
 
             # if debugging is turned on and we have reached the debug interval
             if debug and i % debug_interval == 0:
@@ -103,17 +120,28 @@ def run(st, num_moves, lambda_prime, debug=False, debug_interval=1000):
                 raise ValueError(
                     "The universe shrunk to a point at some particular time! "
                 )
-            if len(st.nodes) > 5 * 32 * 64:
+            if len(st.nodes) >= max_size:
+                print(len(st.nodes))
                 raise ValueError(
                     "The universe is to big and its slowing down the simulation "
                 )
     except Exception as e:
+        # pass
+        # error return off
         print("universe failed, " + str(e))
-        print(st.space_slice_sizes)
+        # print(st.space_slice_sizes)
     return st_history
 
 
-def do_sensemble(num_samples, num_iter, i_space_size, i_time_size, lambda_prime):
+def do_sensemble(
+    num_samples,
+    num_iter,
+    i_space_size,
+    i_time_size,
+    lambda_prime,
+    prob_divisor=4,
+    max_size=32 * 64 * 3,
+):
     """
         this runs num_samples universe each for num_iter iterations.
         It takes as argument
@@ -126,6 +154,14 @@ def do_sensemble(num_samples, num_iter, i_space_size, i_time_size, lambda_prime)
     ensemble = []
     for i in range(num_samples):
         st = make_flat_spacetime(i_space_size, i_time_size)
-        run(st, num_iter, lambda_prime, debug=False, debug_interval=10 ** 3)
+        run(
+            st,
+            num_iter,
+            lambda_prime,
+            debug=False,
+            debug_interval=10 ** 3,
+            prob_divisor=prob_divisor,
+            max_size=max_size,
+        )
         ensemble.append(st)
     return ensemble
