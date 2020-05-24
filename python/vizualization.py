@@ -276,7 +276,7 @@ def vizualize_space_time_2d(space_time, seed=0):
     fig = plt.figure()
 
     ax = fig.add_subplot(111)
-    ax.set_title(str(seed))
+    # ax.set_title(str(seed))
 
     # removes the past from zero level nodes
     # this should be unnescesary?
@@ -297,7 +297,7 @@ def vizualize_space_time_2d(space_time, seed=0):
         # create a list of all adjacent nodes. I have chosen to include only the
         # right and future nodes so as not to double plot edges.
         adjacent_nodes = list(n.past.values())
-        # adjacent_nodes.append(n.left)
+        adjacent_nodes.append(n.left)
 
         for adjacent_node in adjacent_nodes:
             adjacent_node_x = coord_dict[adjacent_node][0]
@@ -308,13 +308,15 @@ def vizualize_space_time_2d(space_time, seed=0):
             if (this_x - adjacent_node_x) ** 2 + (this_y - adjacent_node_y) ** 2 < (
                 minSpaceSize - 5
             ) ** 2:
-                ax.plot([this_x, adjacent_node_x], [this_y, adjacent_node_y], "Black")
+                ax.plot([this_x, adjacent_node_x], [this_y, adjacent_node_y], "Black",alpha=0.3)
 
     # this draws the nodes
-    for node, coord in coord_dict.items():
-        ax.scatter(coord[0], coord[1])
+    # for node, coord in coord_dict.items():
+        # ax.scatter(coord[0], coord[1],c = "blue")
+        # ax.annotate(np.round(np.random.random(),2), (coord[0], coord[1]))
 
     # plt.savefig(str(seed) + ".png")
+    plt.axis('off')
     plt.show()
     plt.close("all")
 

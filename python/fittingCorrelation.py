@@ -25,14 +25,14 @@ def func(x,   a,b):
 def func(x, a, b, c):
 	return ((1-c)*a**b*(np.abs(x)+a)**(-b)+c)
 
-# remove one parameter by garunteeing the maximum is 1 (if you switch to this change titling )
-def func(x, a, b):
-	return (a+(1-a)*np.e**(-b*np.abs(x)))
+# # remove one parameter by garunteeing the maximum is 1 (if you switch to this change titling )
+# def func(x, a, b):
+# 	return (a+(1-a)*np.e**(-b*np.abs(x)))
 
 
-# remove one parameter by assuming the exponent is just x
-def func(x,  a):
-	return (a+(1-a)*np.e**(-np.abs(x)))
+# # remove one parameter by assuming the exponent is just x
+# def func(x,  a):
+# 	return (a+(1-a)*np.e**(-np.abs(x)))
 
 
 data = np.loadtxt("VolumeCorrelation1.csv")
@@ -45,13 +45,13 @@ x = np.sort(x)
 
 
 popt, pcov = curve_fit(func, x, data,maxfev=10000)
-fitData = func(x,  popt[0], );
+fitData = func(x,  popt[0], popt[1],popt[2]);
 
-plt.plot(x,data,"o")
-plt.plot(x,fitData,"-")
+plt.plot(x,data,".")
+# plt.plot(x,fitData,"-")
 plt.xlabel("time seperation in latice spaces")
 plt.ylabel("Correlation")
-plt.title("One Parameter Best Fit of Volume Correlation "+r'${0:.3f}+(1-{0:.3f})'.format(popt[0])+r'e^{-|x|}$')
+# plt.title("One Parameter Best Fit of Volume Correlation "+r'${0:.3f}+(1-{0:.3f})'.format(popt[0])+r'e^{-|x|}$')
 # plt.title('{1}'.format(popt[0]))
 plt.show()
 # plt.plot(x,data-fitData,"*")

@@ -37,6 +37,9 @@ class node(object):
     def __repr__(self):
         return "node" + str((self.space_index, self.time_index))
 
+    def num_connections(self):
+        return len(self.future) + len(self.past) + 2
+
     def add_future(self, new_future_node):
         """adds new_future_node to selfs future"""
         self.future[new_future_node.index] = new_future_node

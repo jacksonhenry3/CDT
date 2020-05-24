@@ -6,7 +6,7 @@ import numpy as np
 
 
 # Test 1, visualize a small space-time after one move
-# st = make_flat_spacetime(8, 8)
+# st = make_flat_spacetime(10, 10)
 # st.move(st.get_random_node())
 # vizualize_space_time_2d(st)
 
@@ -20,8 +20,8 @@ import numpy as np
 # =======================================================
 
 # Test 3, visualize a large space-time after many moves and inverse moves
-# st = make_flat_spacetime(64, 32)
-# run(st, 10 ** 5, 0.6, debug=False, debug_interval=1000)
+# st = make_flat_spacetime(20, 20)
+# run(st, 3 * 10 ** 5, 0.6, debug=True, debug_interval=1000)
 # vizualize_space_time_2d(st)
 
 # =======================================================
@@ -104,53 +104,108 @@ import numpy as np
 
 # =======================================================
 
-# # Test 8, correlator for universes of different size
-def get_corelator(ensemble_of_SSSizes, t):
-    # argument should be a list of spatial slice sizes for universes with the same 4 volume
-    # add a check that the all of the same time length
-    # add a check to make sure they are all the same 4 vol
-    T = len(ensemble_of_SSSizes[0])
-    corelator = 0
-    for s in np.arange(1, T):
-        corelator += np.sum([v[s] * v[(s + t) % T]/(max(v[s],v[(s + t) % T])**2) for v in ensemble_of_SSSizes])
-    corelator = corelator / float(T - 1)
-    return corelator/len(ensemble_of_SSSizes)
-
-
-def get_corelator(ensemble_of_SSSizes, t):
-    # argument should be a list of spatial slice sizes for universes with the same 4 volume
-    # add a check that the all of the same time length
-    # add a check to make sure they are all the same 4 vol
-    T = len(ensemble_of_SSSizes[0])
-    corelator = 0
-    for s in np.arange(1, T):
-        corelator += np.sum([v[s] * v[(s + t) % T] for v in ensemble_of_SSSizes])
-    divisor = 0
-    for s in np.arange(1, T):
-        divisor += np.sum([v[s]**2 for v in ensemble_of_SSSizes])
-    corelator = corelator / divisor
-    return corelator
-
-
-ensemble_of_SSSizes = []
-for i in range(50):
-    print(i)
-    st = make_flat_spacetime(64, 128)
-    run(st, 100000, 0.65, size_cutoff=int(64 * 128 * 0.5),max_size = int(64 * 128 * 2))
-    ensemble_of_SSSizes.append(st.space_slice_sizes)
-
-
-for s in ensemble_of_SSSizes:
-    print(np.sum(s))
-T = len(ensemble_of_SSSizes[0])
-y = [get_corelator(ensemble_of_SSSizes, t) for t in range(T)]
-np.savetxt("VolumeCorrelation1.csv",y)
-y = np.roll(y,int(len(y)/2))
-
-
-
-plt.plot(range(T), y, ".")
-plt.show()
+# # # Test 8, correlator for universes of different size
+# def get_corelator(ensemble_of_SSSizes, t):
+#     # argument should be a list of spatial slice sizes for universes with the same 4 volume
+#     # add a check that the all of the same time length
+#     # add a check to make sure they are all the same 4 vol
+#     T = len(ensemble_of_SSSizes[0])
+#     corelator = 0
+#     for s in np.arange(1, T):
+#         corelator += np.sum(
+#             [
+#                 v[s] * v[(s + t) % T] / (max(v[s], v[(s + t) % T]) ** 2)
+#                 for v in ensemble_of_SSSizes
+#             ]
+#         )
+#     corelator = corelator / float(T - 1)
+#     return corelator / len(ensemble_of_SSSizes)
+#
+#
+# def get_corelator(ensemble_of_SSSizes, t):
+#     # argument should be a list of spatial slice sizes for universes with the same 4 volume
+#     # add a check that the all of the same time length
+#     # add a check to make sure they are all the same 4 vol
+#     T = len(ensemble_of_SSSizes[0])
+#     corelator = 0
+#     for s in np.arange(1, T):
+#         corelator += np.sum([v[s] * v[(s + t) % T] for v in ensemble_of_SSSizes])
+#     divisor = 0
+#     for s in np.arange(1, T):
+#         divisor += np.sum([v[s] ** 2 for v in ensemble_of_SSSizes])
+#     corelator = corelator / divisor
+#     return corelator
+#
+#
+# def get_corelator(ensemble_of_SSSizes, t):
+#     # argument should be a list of spatial slice sizes for universes with the same 4 volume
+#     # add a check that the all of the same time length
+#     # add a check to make sure they are all the same 4 vol
+#     T = len(ensemble_of_SSSizes[0])
+#     corelator = 0
+#     for s in np.arange(1, T):
+#         corelator += np.sum([v[s] * v[(s + t) % T] for v in ensemble_of_SSSizes])
+#     divisor = 0
+#     for s in np.arange(1, T):
+#         divisor += np.sum([v[s] ** 2 for v in ensemble_of_SSSizes])
+#     corelator = corelator / divisor
+#     return corelator
+#
+#
+# def get_corelator_not_normed(ensemble_of_SSSizes, t):
+#     # argument should be a list of spatial slice sizes for universes with the same 4 volume
+#     # add a check that the all of the same time length
+#     # add a check to make sure they are all the same 4 vol
+#     T = len(ensemble_of_SSSizes[0])
+#     corelator = 0
+#     for s in np.arange(1, T):
+#         corelator += np.sum([v[s] * v[(s + t) % T] for v in ensemble_of_SSSizes])
+#     # divisor = 0
+#     # for s in np.arange(1, T):
+#     #     divisor += np.sum([v[s]**2 for v in ensemble_of_SSSizes])
+#     # corelator = corelator / divisor
+#     return corelator
+#
+#
+# def get_variation_corelator_not_normed(ensemble_of_SSSizes, t):
+#
+#     T = len(ensemble_of_SSSizes[0])
+#     corelator = 0
+#
+#     ensemble_average_at = [
+#         np.mean([v[t] for v in ensemble_of_SSSizes]) for t in np.arange(0, T)
+#     ]
+#     for s in np.arange(1, T):
+#         corelator += np.mean(
+#             [
+#                 (v[s] - ensemble_average_at[s])
+#                 * (v[(s + t) % T] - ensemble_average_at[(s + t) % T])
+#                 for v in ensemble_of_SSSizes
+#             ]
+#         )
+#
+#     return corelator / T
+#
+#
+# # (* Note that each iterations is starting from flat, this is bad and innefecient?)
+# ensemble_of_SSSizes = []
+# for i in range(100):
+#     print(i)
+#     st = make_flat_spacetime(64, 128)
+#     run(st, 100000, 0.65, size_cutoff=int(32 * 64 * 0.5), max_size=int(64 * 128 * 2))
+#     ensemble_of_SSSizes.append(st.space_slice_sizes)
+#
+#
+# for s in ensemble_of_SSSizes:
+#     print(np.sum(s))
+# T = len(ensemble_of_SSSizes[0])
+# y = [get_variation_corelator_not_normed(ensemble_of_SSSizes, t) for t in range(T)]
+# np.savetxt("VolumeCorrelation1.csv", y)
+# y = np.roll(y, int(len(y) / 2))
+#
+#
+# plt.plot(range(T), y, ".")
+# plt.show()
 
 # =======================================================
 
@@ -183,4 +238,49 @@ plt.show()
 # plt.plot(np.roll(np.mean([get_single_instance_correlator(sss) for sss in ensemble_of_SSSizes],axis = 0),timeSize/2),color = (0,0,0),linewidth=3.0)
 
 # plt.tight_layout()
+# plt.show()
+
+
+# =======================================================
+
+# Test 10, deficite angle
+#
+# st = make_flat_spacetime(64, 64)
+# run(st, 3 * 10 ** 5, 0.6, debug=True, debug_interval=10000, max_size=64 * 81 * 100)
+# # st.move(st.get_random_node())
+# initial_node = st.get_random_node()
+#
+#
+# T = np.array([])
+# X = np.array([])
+# z = np.array([])
+#
+# x = 0
+# t = 0
+# # print(list(initial_node.future.values()))
+# fig = plt.figure()
+# ax = fig.gca(projection="3d")
+#
+#
+# for t in range(st.num_time_slices):
+#     initial_node = list(initial_node.future.values())[0]
+#     current_node = initial_node.right
+#     deficite_angle = []
+#     x = 0
+#     xline = np.array([])
+#     tline = np.array([])
+#     zline = np.array([])
+#     while current_node != initial_node:
+#         z = np.append(z, current_node.num_connections() - 6)
+#         X = np.append(X, x)
+#         T = np.append(T, t)
+#
+#         zline = np.append(zline, current_node.num_connections() - 6)
+#         xline = np.append(xline, x)
+#         tline = np.append(tline, t)
+#         x += 1
+#         current_node = current_node.right
+#     ax.plot3D(xline / len(xline), tline, zline, "gray", alpha=0.2)
+#
+#
 # plt.show()
