@@ -40,6 +40,10 @@ class node(object):
     def num_connections(self):
         return len(self.future) + len(self.past) + 2
 
+    def R(self, a=1):
+        n = self.num_connections()
+        return ((n - 6.0) * np.pi / 3.0) / (1 / 3.0 * n * a)
+
     def add_future(self, new_future_node):
         """adds new_future_node to selfs future"""
         self.future[new_future_node.index] = new_future_node
