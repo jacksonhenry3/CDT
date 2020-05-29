@@ -92,7 +92,8 @@ def get_rectangular_past_average_coordinates_2d(space_time):
     #  loop through each zero level node and give it a location
     current_zero_level_node = unused_zero_level_nodes[0]
     while current_zero_level_node in unused_zero_level_nodes:
-        coords_dict[current_zero_level_node] = [x, y]
+        coords_dict[current_zero_level_node.index] = [x, y]
+        print(current_zero_level_node.index)
         x += d_x
 
         unused_zero_level_nodes.remove(current_zero_level_node)
@@ -104,8 +105,10 @@ def get_rectangular_past_average_coordinates_2d(space_time):
         for index, n in space_time.nodes.items():
             if n.time_index == time_index:
                 past_x = []
-                for past_index, past_node in n.past.items():
-                    past_x.append(coords_dict[past_node][0])
+                print(str(time_index) + "============")
+                for past_index in n.past:
+                    print(past_index)
+                    past_x.append(coords_dict[past_index][0])
 
                 past_x = np.sort(past_x)
 
@@ -151,7 +154,9 @@ def get_rectangular_past_average_coordinates_2d(space_time):
                 x = np.mean(np.array(g))
 
                 y = n.time_index
-                coords_dict[n] = [x, y]
+
+                print("added " + str(n.index))
+                coords_dict[n.index] = [x, y]
     return coords_dict
 
 
@@ -291,15 +296,16 @@ def vizualize_space_time_2d(space_time, seed=0):
 
     # This plots the line between the points
     for n in space_time.nodes.values():
-        this_x = coord_dict[n][0]
-        this_y = coord_dict[n][1]
+        this_x = coord_dict[n.index][0]
+        this_y = coord_dict[n.index][1]
 
         # create a list of all adjacent nodes. I have chosen to include only the
         # right and future nodes so as not to double plot edges.
-        adjacent_nodes = list(n.past.values())
-        adjacent_nodes.append(n.left)
+        adjacent_nodes = list(n.past)
+        adjacent_nodes.append(n.left.index)
 
         for adjacent_node in adjacent_nodes:
+            print(adjacent_node)
             adjacent_node_x = coord_dict[adjacent_node][0]
             adjacent_node_y = coord_dict[adjacent_node][1]
 
@@ -308,15 +314,20 @@ def vizualize_space_time_2d(space_time, seed=0):
             if (this_x - adjacent_node_x) ** 2 + (this_y - adjacent_node_y) ** 2 < (
                 minSpaceSize - 5
             ) ** 2:
-                ax.plot([this_x, adjacent_node_x], [this_y, adjacent_node_y], "Black",alpha=0.3)
+                ax.plot(
+                    [this_x, adjacent_node_x],
+                    [this_y, adjacent_node_y],
+                    "Black",
+                    alpha=0.3,
+                )
 
     # this draws the nodes
     # for node, coord in coord_dict.items():
-        # ax.scatter(coord[0], coord[1],c = "blue")
-        # ax.annotate(np.round(np.random.random(),2), (coord[0], coord[1]))
+    # ax.scatter(coord[0], coord[1],c = "blue")
+    # ax.annotate(np.round(np.random.random(),2), (coord[0], coord[1]))
 
     # plt.savefig(str(seed) + ".png")
-    plt.axis('off')
+    plt.axis("off")
     plt.show()
     plt.close("all")
 

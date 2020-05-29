@@ -3,6 +3,10 @@ import numpy as np
 from node import node
 import random
 
+from numpy.random import default_rng
+
+rg = default_rng(12345)
+
 
 class space_time(object):
     """space_time objects contain all nodes and their connections.
@@ -34,10 +38,10 @@ class space_time(object):
         """
 
         # selects a random future and past edge to be split
-        random_future_index = random.choice(list(random_node.future))
-        random_future_node = random_node.future[random_future_index]
-        random_past_index = random.choice(list(random_node.past))
-        random_past_node = random_node.past[random_past_index]
+        random_future_index = rg.integers(len(random_node.future))
+        random_future_node = self.nodes[random_node.future[random_future_index]]
+        random_past_index = rg.integers(len(random_node.past))
+        random_past_node = self.nodes[random_node.past[random_past_index]]
 
         new_node = node(
             self, str(random_node.space_index) + " right", random_node.time_index
@@ -45,30 +49,31 @@ class space_time(object):
         random_node.space_index = str(random_node.space_index) + " left"
 
         # splits the set of future nodes in two
-        future_left = [random_future_node]
-        future_right = [random_future_node]
+        future_left = [random_future_index]
+        future_right = [random_future_index]
         n = random_future_node.right
-        while n in list(random_node.future.values()):
+        while n in random_node.future:
             future_right.append(n)
-            n = n.right
-            if n == random_future_node.right:
+            n = self.nodes(n).right
+            if n == random_future_node.right.index:
                 break
-        future_left += list(set(random_node.future.values()) - set(future_right))
+        future_left += list(set(random_node.future) - set(future_right))
 
         # assigns the two halfs to the new node and the random node
+        # future_left = [self.nodes[index] for index in future_left]
         random_node.replace_future(future_left)
         new_node.replace_future(future_right)
 
         # splits the set of past nodes in two
-        past_left = [random_past_node]
-        past_right = [random_past_node]
+        past_left = [random_past_index]
+        past_right = [random_past_index]
         n = random_past_node.right
-        while n in list(random_node.past.values()):
+        while n in list(random_node.past):
             past_right.append(n)
-            n = n.right
+            n = self.nodes(n).right
             if n == random_past_node.right:
                 break
-        past_left += list(set(random_node.past.values()) - set(past_right))
+        past_left += list(set(random_node.past) - set(past_right))
 
         # assigns the two halfs to the new node and the random node
         random_node.replace_past(past_left)

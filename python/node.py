@@ -24,8 +24,8 @@ class node(object):
     ]
 
     def __init__(self, space_time, space_index, time_index):
-        self.future = {}
-        self.past = {}
+        self.future = []
+        self.past = []
         self.left = None
         self.right = None
         self.space_index = space_index
@@ -35,7 +35,10 @@ class node(object):
         space_time.max_index += 1
 
     def __repr__(self):
-        return "node" + str((self.space_index, self.time_index))
+        return str(self.index) + "node" + str((self.space_index, self.time_index))
+
+    def get_node(self, index):
+        return self.space_time.nodes[index]
 
     def num_connections(self):
         return len(self.future) + len(self.past) + 2
@@ -46,36 +49,37 @@ class node(object):
 
     def add_future(self, new_future_node):
         """adds new_future_node to selfs future"""
-        self.future[new_future_node.index] = new_future_node
-        new_future_node.past[self.index] = self
+        self.future.append(new_future_node)
+        self.get_node(new_future_node).past.append(self.index)
 
     def remove_future(self, old_future_node):
         """removes old_future_node from selfs future"""
-        del self.future[old_future_node.index]
-        del old_future_node.past[self.index]
+        self.future.remove(old_future_node)
+        self.get_node(old_future_node).past.remove(self.index)
 
     def add_past(self, new_past_node):
         """adds new_past_node to selfs past"""
-        self.past[new_past_node.index] = new_past_node
-        new_past_node.future[self.index] = self
+        self.past.append(new_past_node)
+        self.get_node(new_past_node).future.append(self.index)
 
     def remove_past(self, old_past_node):
         """removes old_past_node from selfs past"""
-        del self.past[old_past_node.index]
-        del old_past_node.future[self.index]
+        self.past.remove(old_past_node)
+        self.get_node(old_past_node).future.remove(self.index)
 
     def replace_future(self, new_future):
         """replaces selfs future with all the nodes in the list new_future"""
         all_future = self.future.copy()
-        for index, old_future_node in all_future.items():
-            self.remove_future(old_future_node)
+        for old_future_node_index in all_future:
+            # old_future_node = self.space_time.nodes[old_future_node_index]
+            self.remove_future(old_future_node_index)
         for new_future_node in new_future:
             self.add_future(new_future_node)
 
     def replace_past(self, new_past):
         """replaces selfs past with all the nodes in the list new_past"""
         all_past = self.past.copy()
-        for index, old_past_node in all_past.items():
+        for old_past_node in all_past:
             self.remove_past(old_past_node)
         for new_past_node in new_past:
             self.add_past(new_past_node)
