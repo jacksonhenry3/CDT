@@ -85,78 +85,85 @@ def get_rectangular_past_average_coordinates_2d(space_time):
     y = 0
 
     # list of all nodes in a specific time slice chosen as the start
-    unused_zero_level_nodes = [
-        n for index, n in space_time.nodes.items() if n.time_index == 0
-    ]
-
-    #  loop through each zero level node and give it a location
-    current_zero_level_node = unused_zero_level_nodes[0]
-    while current_zero_level_node in unused_zero_level_nodes:
-        coords_dict[current_zero_level_node.index] = [x, y]
-        print(current_zero_level_node.index)
+    unused_zero_level_nodes = []
+    n = space_time.get_random_node()
+    while n not in unused_zero_level_nodes:
+        print("zero level node " + str(n.index))
+        unused_zero_level_nodes.append(n)
+        coords_dict[n.index] = [x, y]
         x += d_x
-
-        unused_zero_level_nodes.remove(current_zero_level_node)
-        current_zero_level_node = current_zero_level_node.right
+        n = n.get_node(n.right)
 
     # loop through all nodes giving them a location based on the average
     # of all nodes they are connected to in the past
-    for time_index in range(1, space_time.num_time_slices):
-        for index, n in space_time.nodes.items():
-            if n.time_index == time_index:
-                past_x = []
-                print(str(time_index) + "============")
-                for past_index in n.past:
-                    print(past_index)
-                    past_x.append(coords_dict[past_index][0])
+    n_start = space_time.get_node(n.future[1])
+    n = space_time.get_node(n_start.right)
+    time_index = 0
+    row_start = n.index
+    counter = 0
+    while counter != 2:
+        if n == n_start:
+            counter += 1
+        past_x = []
+        for past_index in n.past:
+            past_x.append(coords_dict[past_index][0])
 
-                past_x = np.sort(past_x)
+        past_x = np.sort(past_x)
 
-                # split the past in to sections in case the past nodes end up
-                # on opposite sides
-                g1 = [past_x[0]]
+        # split the past in to sections in case the past nodes end up
+        # on opposite sides
+        g1 = [past_x[0]]
 
-                # get all past nodes that are on the left
-                for i in range(len(past_x) - 1):
-                    if (
-                        np.abs(past_x[i] - past_x[i + 1])
-                        <= min(space_time.space_slice_sizes) / 2.0
-                    ):
-                        g1.append(past_x[i + 1])
-                    else:
-                        break
+        # get all past nodes that are on the left
+        for i in range(len(past_x) - 1):
+            if (
+                np.abs(past_x[i] - past_x[i + 1])
+                <= min(space_time.space_slice_sizes) / 2.0
+            ):
+                g1.append(past_x[i + 1])
+            else:
+                break
 
-                # get all the remaining past nodes
-                g2 = [x for x in past_x if x not in g1]
+        # get all the remaining past nodes
+        g2 = [x for x in past_x if x not in g1]
 
-                lg1 = len(g1)
-                lg2 = len(g2)
+        lg1 = len(g1)
+        lg2 = len(g2)
 
-                # if the left and right are the same size alternate which side is used
-                if lg1 == lg2:
-                    if time_index % 2 == 0:
-                        lg1 += 1
-                    if time_index % 2 == 1:
-                        lg2 += 1
+        # if the left and right are the same size alternate which side is used
+        if lg1 == lg2:
+            if time_index % 2 == 0:
+                lg1 += 1
+            if time_index % 2 == 1:
+                lg2 += 1
 
-                # if the left past is larger push the node left
-                if lg1 >= lg2:
-                    for x in g2:
-                        g1.append(x - (max(past_x) + 1) + min(past_x))
-                    g = g1
+        # if the left past is larger push the node left
+        if lg1 >= lg2:
+            for x in g2:
+                g1.append(x - (max(past_x) + 1) + min(past_x))
+            g = g1
 
-                # if the right past is larger push the node right
-                elif lg2 >= lg1:
-                    for x in g1:
-                        g2.append(x + max(past_x) + 1)
-                    g = g2
+        # if the right past is larger push the node right
+        elif lg2 >= lg1:
+            for x in g1:
+                g2.append(x + max(past_x) + 1)
+            g = g2
 
-                x = np.mean(np.array(g))
+        x = np.mean(np.array(g))
 
-                y = n.time_index
+        y = time_index
 
-                print("added " + str(n.index))
-                coords_dict[n.index] = [x, y]
+        # print("added " + str(n.index))
+        coords_dict[n.index] = [x, y]
+
+        n = space_time.get_node(n.right)
+        if n.index == row_start:
+            print("gone up a level")
+            time_index += 1
+
+            n = space_time.get_node(n.future[0])
+            row_start = n.index
+
     return coords_dict
 
 
@@ -285,14 +292,14 @@ def vizualize_space_time_2d(space_time, seed=0):
 
     # removes the past from zero level nodes
     # this should be unnescesary?
-    unused_zero_level_nodes = [
-        n for index, n in space_time.nodes.items() if n.time_index == 0
-    ]
-    current_zero_level_node = unused_zero_level_nodes[0]
-    while current_zero_level_node in unused_zero_level_nodes:
-        current_zero_level_node.replace_past([])
-        unused_zero_level_nodes.remove(current_zero_level_node)
-        current_zero_level_node = current_zero_level_node.right
+    # unused_zero_level_nodes = [
+    #     n for index, n in space_time.nodes.items() if n.time_index == 0
+    # ]
+    # current_zero_level_node = unused_zero_level_nodes[0]
+    # while current_zero_level_node in unused_zero_level_nodes:
+    #     current_zero_level_node.replace_past([])
+    #     unused_zero_level_nodes.remove(current_zero_level_node)
+    #     current_zero_level_node = current_zero_level_node.right
 
     # This plots the line between the points
     for n in space_time.nodes.values():
@@ -301,18 +308,19 @@ def vizualize_space_time_2d(space_time, seed=0):
 
         # create a list of all adjacent nodes. I have chosen to include only the
         # right and future nodes so as not to double plot edges.
-        adjacent_nodes = list(n.past)
-        adjacent_nodes.append(n.left.index)
+        adjacent_nodes = n.past
+
+        adjacent_nodes.append(n.get_node(n.left).index)
 
         for adjacent_node in adjacent_nodes:
-            print(adjacent_node)
+            # print(adjacent_node)
             adjacent_node_x = coord_dict[adjacent_node][0]
             adjacent_node_y = coord_dict[adjacent_node][1]
-
+            print(adjacent_node_x)
             # this wont plot deges that are to long (i.e longer than the
             # shortest spatial slice)
             if (this_x - adjacent_node_x) ** 2 + (this_y - adjacent_node_y) ** 2 < (
-                minSpaceSize - 5
+                minSpaceSize * 0.5
             ) ** 2:
                 ax.plot(
                     [this_x, adjacent_node_x],

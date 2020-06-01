@@ -6,16 +6,17 @@ import numpy as np
 
 
 # Test 1, visualize a small space-time after one move
-# st = make_flat_spacetime(10, 10)
-# st.move(st.get_random_node())
-# vizualize_space_time_2d(st)
+st = make_flat_spacetime(10, 10)
+st.move(st.nodes[46])
+# check_adjacent(st)
+vizualize_space_time_2d(st)
 
 # =======================================================
 
 # Test 2, visualize a small space-time after one inverse move
-st = make_flat_spacetime(8, 8)
-st.inverse_move(st.get_random_node())
-vizualize_space_time_2d(st)
+# st = make_flat_spacetime(8, 8)
+# st.inverse_move(st.get_random_node())
+# vizualize_space_time_2d(st)
 
 # =======================================================
 
