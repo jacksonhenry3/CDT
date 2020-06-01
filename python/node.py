@@ -21,10 +21,13 @@ class node(object):
         space_time.nodes[self.index] = self
 
     def __repr__(self):
-        return "node with index " + str(self.index)
-
-    def get_node(self, index):
-        return self.space_time.nodes[index]
+        return "self:{index}, left:{left}, right:{right}, past:{past}, future:{future}".format(
+            future=self.future,
+            past=self.past,
+            left=self.left,
+            right=self.right,
+            index=self.index,
+        )
 
     def num_connections(self):
         return len(self.future) + len(self.past) + 2
@@ -35,7 +38,11 @@ class node(object):
 
     def replace_right(self, right):
         self.right = right
-        self.get_node(right).left = self.index
+        self.space_time.get_node(self.right).left = self.index
+
+    def replace_left(self, left):
+        self.left = left
+        self.space_time.get_node(self.left).right = self.index
 
     def add_future(self, new_future_node):
         """adds new_future_node to selfs future"""
@@ -62,7 +69,7 @@ class node(object):
         new_future = [self.space_time.get_node(index) for index in new_future]
         all_future = self.future.copy()
         for old_future_node in all_future:
-            self.remove_future(self.get_node(old_future_node))
+            self.remove_future(self.space_time.get_node(old_future_node))
         for new_future_node in new_future:
             self.add_future(new_future_node)
 
@@ -71,6 +78,6 @@ class node(object):
         new_past = [self.space_time.get_node(index) for index in new_past]
         all_past = self.past.copy()
         for old_past_node in all_past:
-            self.remove_past(self.get_node(old_past_node))
+            self.remove_past(self.space_time.get_node(old_past_node))
         for new_past_node in new_past:
             self.add_past(new_past_node)

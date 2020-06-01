@@ -88,15 +88,15 @@ def get_rectangular_past_average_coordinates_2d(space_time):
     unused_zero_level_nodes = []
     n = space_time.get_random_node()
     while n not in unused_zero_level_nodes:
-        print("zero level node " + str(n.index))
+        # print("zero level node " + str(n.index))
         unused_zero_level_nodes.append(n)
         coords_dict[n.index] = [x, y]
         x += d_x
-        n = n.get_node(n.right)
+        n = space_time.get_node(n.right)
 
     # loop through all nodes giving them a location based on the average
     # of all nodes they are connected to in the past
-    n_start = space_time.get_node(n.future[1])
+    n_start = space_time.get_node(n.future[0])
     n = space_time.get_node(n_start.right)
     time_index = 0
     row_start = n.index
@@ -158,7 +158,7 @@ def get_rectangular_past_average_coordinates_2d(space_time):
 
         n = space_time.get_node(n.right)
         if n.index == row_start:
-            print("gone up a level")
+            # print("gone up a level")
             time_index += 1
 
             n = space_time.get_node(n.future[0])
@@ -310,24 +310,22 @@ def vizualize_space_time_2d(space_time, seed=0):
         # right and future nodes so as not to double plot edges.
         adjacent_nodes = n.past
 
-        adjacent_nodes.append(n.get_node(n.left).index)
+        # print(n)
+        adjacent_nodes.append(space_time.get_node(n.left).index)
 
         for adjacent_node in adjacent_nodes:
             # print(adjacent_node)
             adjacent_node_x = coord_dict[adjacent_node][0]
             adjacent_node_y = coord_dict[adjacent_node][1]
-            print(adjacent_node_x)
+            # print(adjacent_node_x)
             # this wont plot deges that are to long (i.e longer than the
             # shortest spatial slice)
-            if (this_x - adjacent_node_x) ** 2 + (this_y - adjacent_node_y) ** 2 < (
-                minSpaceSize * 0.5
-            ) ** 2:
-                ax.plot(
-                    [this_x, adjacent_node_x],
-                    [this_y, adjacent_node_y],
-                    "Black",
-                    alpha=0.3,
-                )
+            # if (this_x - adjacent_node_x) ** 2 + (this_y - adjacent_node_y) ** 2 < (
+            #     minSpaceSize * 0.5
+            # ) ** 2:
+            ax.plot(
+                [this_x, adjacent_node_x], [this_y, adjacent_node_y], "Black", alpha=0.3
+            )
 
     # this draws the nodes
     # for node, coord in coord_dict.items():
