@@ -103,7 +103,7 @@ def run(
 
             # if debugging is turned on and we have reached the debug interval
             if debug and i % debug_interval == 0:
-                # print the percent complete.
+                # print the percent complete.abs(x)
                 print(np.round(float(i) / num_moves * 100.0, decimals=2))
                 # print(str(i) + "-----" + str(st.space_slice_sizes))
 

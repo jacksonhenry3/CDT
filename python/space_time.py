@@ -24,6 +24,19 @@ class space_time(object):
         self.num_time_slices = len(self.space_slice_sizes)
         self.max_index = 0
 
+    def get_space_structure(self, base_node):
+        n_start = self.get_random_node()
+        row_start = n_start
+        n = self.get_node(n_start.right)
+        counter = 0
+        while counter != 2:
+            if n == n_start:
+                counter += 1
+
+            if n.index == row_start:
+                n = self.get_node(n.future[0])
+                row_start = n.index
+
     def generate_flat(self, space_size, time_size):
         if self.max_index > 0:
             print("there are already nodes! This can only run on a new space_time")
@@ -160,21 +173,78 @@ class space_time(object):
         del self.nodes[prev_right.index]
 
     def adjacency(self):
-        m = np.zeros((len(self.nodes), len(self.nodes)))
-        print(len(self.nodes))
 
         row_idex_dict = {}
-        for j, M in enumerate(self.nodes.values()):
-            row_idex_dict[M.index] = j
-            print(j)
+
+        n_start = list(self.nodes.values())[0]
+        row_start = n_start
+        n = self.get_node(n_start.right)
+        counter = 0
+        current_index = 0
+        num_time_slices = 1
+        while counter != 1:
+            if n == n_start:
+                # print("blipity")
+                counter += 1
+
+            if n.index not in row_idex_dict:
+                row_idex_dict[n.index] = current_index
+                # print(current_index)
+
+                current_index += 1
+            # print(current_index)
+            n = self.get_node(n.right)
+
+            if n.index == row_start.index:
+                num_time_slices += 1
+                current_index += 3
+                # print("blopity")
+                n = self.get_node(n.future[0])
+                row_start = n
+
+        m = np.zeros(
+            (
+                len(self.nodes) + 3 * num_time_slices,
+                len(self.nodes) + 3 * num_time_slices,
+            )
+        )
+        n_start = list(self.nodes.values())[0]
+        row_start = n_start
+        n = self.get_node(n_start.right)
+        counter = 0
+        current_index = 0
+        while counter != 1:
+            if n == n_start:
+                # print("blipity")
+                counter += 1
+            if n.index in row_idex_dict:
+                # row_idex_dict[n.index] = current_index
+                # print(current_index)
+
+                current_index += 1
+            n = self.get_node(n.right)
+
+            if n.index == row_start.index:
+                for JJJ in range(len(self.nodes) + 3 * num_time_slices):
+                    print(current_index)
+                    print(JJJ)
+                    print()
+                    m[current_index + 1, JJJ] = 0.3
+                    m[JJJ, current_index + 1] = 0.3
+                    m[current_index + 2, JJJ] = 0.1
+                    m[JJJ, current_index + 2] = 0.1
+                    m[current_index, JJJ] = 0.1
+                    m[JJJ, current_index] = 0.1
+                current_index += 3
+                # print("blopity")
+                n = self.get_node(n.future[0])
+                row_start = n
+
         for i, n in enumerate(self.nodes.values()):
-            print("d]s[psdf[]pzdpiofs]")
-            print(m)
             m[row_idex_dict[n.index], row_idex_dict[n.right]] = 1.0
             m[row_idex_dict[n.index], row_idex_dict[n.left]] = 1.0
             for f in n.future:
                 m[row_idex_dict[n.index], row_idex_dict[f]] = 1.0
             for p in n.past:
-                print(p)
                 m[row_idex_dict[n.index], row_idex_dict[p]] = 1.0
         return m

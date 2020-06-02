@@ -3,28 +3,45 @@ from initialization import make_flat_spacetime
 from vizualization import vizualize_space_time_2d
 import matplotlib.pyplot as plt
 import numpy as np
+import space_time
 
 
 # Test 1, visualize a small space-time after one move
-st = make_flat_spacetime(10, 10)
-st.move(st.nodes[46])
+# st = space_time.space_time()
+#
+# st.generate_flat(16, 32)
+# st.move(st.nodes[15])
+# plt.imshow(st.adjacency())
+# plt.show()
+
+
 # check_adjacent(st)
-vizualize_space_time_2d(st)
+# vizualize_space_time_2d(st)
 
 # =======================================================
 
 # Test 2, visualize a small space-time after one inverse move
-# st = make_flat_spacetime(8, 8)
-# st.inverse_move(st.get_random_node())
-# vizualize_space_time_2d(st)
+# st = space_time.space_time()
+# st.generate_flat(16, 32)
+# st.inverse_move(st.nodes[100])
+# # vizualize_space_time_2d(st)
+# plt.imshow(st.adjacency())
+# plt.show()
 
 # =======================================================
 
 # Test 3, visualize a large space-time after many moves and inverse moves
-# st = make_flat_spacetime(20, 20)
-# run(st, 3 * 10 ** 5, 0.6, debug=True, debug_interval=1000)
+st = space_time.space_time()
+st.generate_flat(10, 10)
+run(st, 3 * 10 ** 3, 0.6, debug=False, debug_interval=10000)
+print("getting mat")
+plt.imshow(st.adjacency())
+print("disping mat")
+# put a red dot, size 40, at 2 locations:
+# plt.scatter(x=[30, 40], y=[50, 60], c="r", s=40)
+plt.show()
 # vizualize_space_time_2d(st)
-
+# Graph = networkx.from_numpy_matrix(st.adjacency())
 # =======================================================
 
 # Test 4, test dependance on cosmological constant (long)
