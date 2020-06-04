@@ -1,9 +1,27 @@
+# tests
+
+"""
+1. make sure all nodes have a left and right
+2. make sure all nodes have a future and past
+3. make sure all futures and pasts have only one of each value
+4. make sure all future and pasts do not contain an entire spatial slcie
+5. make sure all spatial slices are suffeciently large
+6. validate that no edges cross
+7.
+"""
+
 from cdt import *
 from initialization import make_flat_spacetime
 from vizualization import vizualize_space_time_2d
 import matplotlib.pyplot as plt
 import numpy as np
 import space_time
+
+
+def moving_average(a, n=3):
+    ret = np.cumsum(a, dtype=float)
+    ret[n:] = ret[n:] - ret[:-n]
+    return ret[n - 1 :] / n
 
 
 # Test 1, visualize a small space-time after one move
@@ -32,14 +50,21 @@ import space_time
 
 # Test 3, visualize a large space-time after many moves and inverse moves
 st = space_time.space_time()
-st.generate_flat(10, 10)
-run(st, 3 * 10 ** 3, 0.6, debug=False, debug_interval=10000)
-print("getting mat")
-plt.imshow(st.adjacency())
-print("disping mat")
+st.generate_flat(32, 32)
+# for i in range(10):
+#     st.inverse_move(st.get_random_node())
+size = run(st, 10 ** 5, 0.6, debug=True, debug_interval=10000)
+# size = moving_average(size, n=20000)
+# size = [s / (i + 1) for i, s in enumerate(size)]
+# plt.plot(size, ".")
+# plt.show()
+# print("getting mat")
+# plt.imshow(st.adjacency())
+# plt.axis("off")
+# print("disping mat")
 # put a red dot, size 40, at 2 locations:
 # plt.scatter(x=[30, 40], y=[50, 60], c="r", s=40)
-plt.show()
+# plt.show()
 # vizualize_space_time_2d(st)
 # Graph = networkx.from_numpy_matrix(st.adjacency())
 # =======================================================

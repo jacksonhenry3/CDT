@@ -32,10 +32,10 @@ def p_of_move_imove(st, n, lambda_prime, prob_divisor=4):
     prob_move = (
         n_n / (n_n + 1) * (n_p * n_f) * np.e ** (-1 * lambda_prime) / prob_divisor
     )
+    # prob_move = 4 * np.e ** (-1 * lambda_prime) / prob_divisor
     prob_imove = np.e ** lambda_prime / prob_divisor
     # prob_move = 4 * np.e ** (-1 * lambda_prime) / prob_divisor
     # prob_imove = np.e ** lambda_prime / prob_divisor
-
     return [prob_move, prob_imove]
 
 
@@ -58,14 +58,16 @@ def one_iteration(st, lambda_prime, prob_divisor=4):
     moveq, imoveq = p_move > r1, p_imove > r2
 
     # if both a move and inverse move would be accepted instead do nothing.
-    if moveq and imoveq > r2:
-        return
+    if moveq and imoveq:
+        return p_move
 
     if moveq:
         st.move(random_vertex)
 
     if imoveq:
+
         st.inverse_move(random_vertex)
+    return p_move
 
 
 def run(
@@ -74,7 +76,7 @@ def run(
     lambda_prime,
     debug=False,
     debug_interval=1000,
-    max_size=3 * 32 * 64,
+    max_size=100 * 100 * 10,
     size_cutoff=0,
     prob_divisor=4,
 ):
@@ -88,7 +90,7 @@ def run(
     I would like to be able to record the full state of the unviverse each debug
     interval but i am having problems copying the state properly.
     """
-    st_history = [len(st.nodes)]
+    st_history = [0]
 
     # i was told there is something better than a try except here but i dont
     # remember what it was
@@ -99,20 +101,20 @@ def run(
             if len(st.nodes) == size_cutoff:
                 print(len(st.nodes))
                 raise ValueError("hit size cutoff")
-            one_iteration(st, lambda_prime, prob_divisor=prob_divisor)
-
+            pmove = one_iteration(st, lambda_prime, prob_divisor=prob_divisor)
             # if debugging is turned on and we have reached the debug interval
             if debug and i % debug_interval == 0:
                 # print the percent complete.abs(x)
                 print(np.round(float(i) / num_moves * 100.0, decimals=2))
+                print("there are " + str(len(st.nodes)) + " nodes")
                 # print(str(i) + "-----" + str(st.space_slice_sizes))
 
-                st_history.append(len(st.nodes))
                 """
                 This is where i would like to copy the current state of the
                 space_time and put it in to st_history to be returned.
                 """
 
+            st_history.append(pmove)
             # if the unviverse gets to small throw an error
             # add checks for to large aswell.
             # are there any other checks you can do?
@@ -130,6 +132,10 @@ def run(
         # error return off
         print("universe failed, " + str(e))
         # print(st.space_slice_sizes)
+        print(st_history)
+        import traceback
+
+        traceback.print_exc()
     return st_history
 
 
@@ -151,17 +157,14 @@ def do_sensemble(
         a modified cosmological constant (float)
         It returns a list of all the simulated unvierses.
     """
+    import multiprocessing
+
+    pool = multiprocessing.Pool(multiprocessing.cpu_count())
+
     ensemble = []
     for i in range(num_samples):
         st = make_flat_spacetime(i_space_size, i_time_size)
-        run(
-            st,
-            num_iter,
-            lambda_prime,
-            debug=False,
-            debug_interval=10 ** 3,
-            prob_divisor=prob_divisor,
-            max_size=max_size,
-        )
+        pool.apply(run, (st, num_iter, lambda_prime))
+        # run
         ensemble.append(st)
     return ensemble

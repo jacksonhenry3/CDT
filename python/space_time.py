@@ -117,6 +117,8 @@ class space_time(object):
                 break
         future_left += list(set(old_node.future) - set(future_right))
 
+        future_left = np.unique(future_left)
+        future_right = np.unique(future_right)
         # assigns the two halfs to the new node and the random node
         # future_left = [self.nodes[index] for index in future_left]
         old_node.replace_future(future_left)
@@ -133,6 +135,8 @@ class space_time(object):
                 break
         past_left += list(set(old_node.past) - set(past_right))
 
+        past_left = np.unique(past_left)
+        past_right = np.unique(past_right)
         # assigns the two halfs to the new node and the random node
         old_node.replace_past(past_left)
         new_node.replace_past(past_right)
@@ -144,16 +148,41 @@ class space_time(object):
         old_node.right = new_node.index
 
         self.nodes[new_node.index] = new_node
+
+        t1 = all_unique(new_node.future)
+        t2 = all_unique(new_node.past)
+        if not (t1 and t2):
+            import sys
+
+            print(new_node.future)
+            print(new_node.past)
+            # print(self.space_slice_sizes)
+            sys.exit("failed in move 1")
+        t1 = all_unique(old_node.future)
+        t2 = all_unique(old_node.past)
+        if not (t1 and t2):
+            import sys
+
+            print(old_node)
+            sys.exit("Error message")
+
         # self.space_slice_sizes[new_node.time_index] += 1
 
     def inverse_move(self, random_node):
         """ merges random_node with random_node.right"""
 
         # adds the past and future of random_node.right to random_node
+        if random_node.right == random_node.index:
+            raise Exception("a spatial layer has only a single node!")
         for new_past_node in self.get_node(random_node.right).past:
+            # print(self.get_node(random_node.right).past)
             random_node.add_past(self.get_node(new_past_node))
+            # print(new_past_node)
         for new_future_node in self.get_node(random_node.right).future:
             random_node.add_future(self.get_node(new_future_node))
+
+        random_node.replace_past(np.unique(random_node.past))
+        random_node.replace_future(np.unique(random_node.future))
 
         # removes the past and future from random_node.right
         self.get_node(random_node.right).replace_past([])
@@ -169,20 +198,30 @@ class space_time(object):
         random_node.right = prev_right.right
 
         # remove random_node.right from self
-        # print("Premptive one " + str(random_node.right))
+        # print("Premptive one " +if random_node.future str(random_node.right))
         del self.nodes[prev_right.index]
+        # print(random_node)
+        t1 = all_unique(random_node.future)
+        t2 = all_unique(random_node.past)
+
+        if not (t1 and t2):
+            import sys
+
+            print("MISTAKE")
+            print(random_node)
+            sys.exit("failed in inverse move")
 
     def adjacency(self):
 
         row_idex_dict = {}
-
+        slice_sep = 1
         n_start = list(self.nodes.values())[0]
         row_start = n_start
-        n = self.get_node(n_start.right)
+        n = row_start
         counter = 0
-        current_index = 0
+        current_index = slice_sep
         num_time_slices = 1
-        while counter != 1:
+        while counter != 2:
             if n == n_start:
                 # print("blipity")
                 counter += 1
@@ -197,23 +236,23 @@ class space_time(object):
 
             if n.index == row_start.index:
                 num_time_slices += 1
-                current_index += 3
+                current_index += slice_sep
                 # print("blopity")
                 n = self.get_node(n.future[0])
                 row_start = n
 
         m = np.zeros(
             (
-                len(self.nodes) + 3 * num_time_slices,
-                len(self.nodes) + 3 * num_time_slices,
+                len(self.nodes) + slice_sep * num_time_slices,
+                len(self.nodes) + slice_sep * num_time_slices,
             )
         )
         n_start = list(self.nodes.values())[0]
         row_start = n_start
-        n = self.get_node(n_start.right)
+        n = row_start
         counter = 0
-        current_index = 0
-        while counter != 1:
+        current_index = slice_sep
+        while counter != 2:
             if n == n_start:
                 # print("blipity")
                 counter += 1
@@ -223,28 +262,48 @@ class space_time(object):
 
                 current_index += 1
             n = self.get_node(n.right)
-
             if n.index == row_start.index:
-                for JJJ in range(len(self.nodes) + 3 * num_time_slices):
-                    print(current_index)
-                    print(JJJ)
-                    print()
-                    m[current_index + 1, JJJ] = 0.3
-                    m[JJJ, current_index + 1] = 0.3
-                    m[current_index + 2, JJJ] = 0.1
-                    m[JJJ, current_index + 2] = 0.1
-                    m[current_index, JJJ] = 0.1
-                    m[JJJ, current_index] = 0.1
-                current_index += 3
+                for JJJ in range(len(self.nodes) + slice_sep * num_time_slices):
+                    # m[current_index + 1, JJJ] += -1
+                    # m[JJJ, current_index + 1] += -1
+                    # m[current_index + 2, JJJ] += -1
+                    # m[JJJ, current_index + 2] += -1
+                    m[current_index, JJJ] += -1
+                    m[JJJ, current_index] += -1
+                current_index += slice_sep
                 # print("blopity")
                 n = self.get_node(n.future[0])
                 row_start = n
 
+        for JJJ in range(len(self.nodes) + slice_sep * num_time_slices):
+            # m[1, JJJ] += -1
+            # m[JJJ, 1] += -1
+            # m[2, JJJ] += -1
+            # m[JJJ, 2] += -1
+            m[0, JJJ] += -1
+            m[JJJ, 0] += -1
+
         for i, n in enumerate(self.nodes.values()):
-            m[row_idex_dict[n.index], row_idex_dict[n.right]] = 1.0
-            m[row_idex_dict[n.index], row_idex_dict[n.left]] = 1.0
+            m[row_idex_dict[n.index], row_idex_dict[n.right]] = 1
+            m[row_idex_dict[n.index], row_idex_dict[n.left]] = 1
             for f in n.future:
-                m[row_idex_dict[n.index], row_idex_dict[f]] = 1.0
+                m[row_idex_dict[n.index], row_idex_dict[f]] = 1
             for p in n.past:
-                m[row_idex_dict[n.index], row_idex_dict[p]] = 1.0
+                m[row_idex_dict[n.index], row_idex_dict[p]] = 1
+
+        # for i, n in enumerate(self.nodes.values()):
+        #     for j, M in enumerate(self.nodes.values()):
+        #         m[row_idex_dict[n.index], row_idex_dict[M.index]] = n.R() + M.R()
         return m
+
+
+def all_unique(test_list):
+    flag = True
+    counter = Counter(test_list)
+    for i, values in counter.items():
+        if values > 1:
+            flag = False
+    return flag
+
+
+from collections import Counter
