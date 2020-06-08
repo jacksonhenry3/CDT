@@ -1,10 +1,20 @@
 import numpy as np  # is this nescesary? Unlikely.
+from collections import Counter
+
+
+def all_unique(test_list):
+    flag = True
+    counter = Counter(test_list)
+    for i, values in counter.items():
+        if values > 1:
+            flag = False
+    return flag
 
 
 class node(object):
     """
     one node in the space-time network. A node has a left and right neighbor index
-    as well as an unorderd dictionairy of future and past node indices. Each node is
+    as well as list of future and past node indices. Each node is
     given a unique index for increased refrencing speed.
     """
 
@@ -21,7 +31,8 @@ class node(object):
         space_time.nodes[self.index] = self
 
     def __repr__(self):
-        return "self:{index}, left:{left}, right:{right}, past:{past}, future:{future}".format(
+        return """self:{index}, left:{left}, right:{right},
+                  past:{past}, future:{future}""".format(
             future=self.future,
             past=self.past,
             left=self.left,
@@ -29,12 +40,16 @@ class node(object):
             index=self.index,
         )
 
+    # usefull values
+
     def num_connections(self):
         return len(self.future) + len(self.past) + 2
 
     def R(self, a=1):
         n = self.num_connections()
         return ((n - 6.0) * np.pi / 3.0) / (1 / 3.0 * n * a)
+
+    # modify node
 
     def replace_right(self, right):
         self.right = right
@@ -81,3 +96,67 @@ class node(object):
             self.remove_past(self.space_time.get_node(old_past_node))
         for new_past_node in new_past:
             self.add_past(new_past_node)
+
+    # Tests
+
+    def has_left(self):
+        """Checks if self has a proper left"""
+        return isinstance(self.left, int) and self.left in self.st.nodes
+
+    def has_right(self):
+        """Checks if self has a proper right"""
+        return isinstance(self.right, int) and self.right in self.st.nodes
+
+    def has_past(self):
+        """Checks if self has a valid past"""
+        # make sure that past has at least one node
+        if len(self.past) < 1:
+            return False
+        # check each node in past to make sure its a valid node
+        for p in self.past:
+            if p not in self.st.nodes:
+                return False
+        return True
+
+    def has_future(self):
+        """Checks if self has a valid future"""
+        # make sure that future has at least one node
+        if len(self.future) < 1:
+            return False
+        # check each node in future to make sure its a valid node
+        for f in self.future:
+            if f not in self.st.nodes:
+                return False
+        return True
+
+    def has_unique_past(self):
+        """Check for duplicates in past"""
+        return all_unique(self.past)
+
+    def has_unique_future(self):
+        """Check for duplicates in future"""
+        return all_unique(self.future)
+
+    def future_fills_slice(self):
+        """ Returns true if the future of node fills an entire slice"""
+        f0 = self.future[0]
+        future_slice = []
+        f = self.st.get_node(f0)
+        while f.index not in future_slice:
+            future_slice.append(f.index)
+            f = self.st.get_node(f.right)
+        if len(self.future) == len(future_slice):
+            return True
+        return False
+
+    def past_fills_slice(self):
+        """ Returns true if the past of node fills an entire slice"""
+        f0 = self.past[0]
+        past_slice = []
+        f = self.st.get_node(f0)
+        while f.index not in past_slice:
+            past_slice.append(f.index)
+            f = self.st.get_node(f.right)
+        if len(self.past) == len(past_slice):
+            return True
+        return False

@@ -1,9 +1,9 @@
 # pretty sure all of this importing  is unnsescsary
-# from initialization import make_flat_spacetime
 import numpy as np
+from space_time import space_time
+import matplotlib.pyplot as plt
 
-# from space_time import space_time
-# from copy import deepcopy as copy
+global cumulative_move_prob
 
 
 def p_of_move_imove(st, n, lambda_prime, prob_divisor=4):
@@ -21,22 +21,23 @@ def p_of_move_imove(st, n, lambda_prime, prob_divisor=4):
     """
 
     # number of nodes in the space time
-    n_n = len(st.nodes)
+    n_n = st.num_nodes
 
     # number of past edges of the specified node
-    n_p = len(n.past)
+    n_p = len(st.get_past(n))
 
     # number of future edges of the specified node
-    n_f = len(n.future)
+    n_f = len(st.get_future(n))
 
     # these proabbilities are given by equation israel et al 37 and 38
     prob_move = (
         n_n / (n_n + 1) * (n_p * n_f) * np.e ** (-1 * lambda_prime) / prob_divisor
     )
-    # prob_move = 4 * np.e ** (-1 * lambda_prime) / prob_divisor
+    prob_move = 4 * np.e ** (-1 * lambda_prime) / prob_divisor
     prob_imove = np.e ** lambda_prime / prob_divisor
     # prob_move = 4 * np.e ** (-1 * lambda_prime) / prob_divisor
     # prob_imove = np.e ** lambda_prime / prob_divisor
+
     return [prob_move, prob_imove]
 
 
@@ -48,7 +49,9 @@ def one_iteration(st, lambda_prime, prob_divisor=4):
 
     # select a random vertex and figure out how likely a move or inverse move on
     # the given vertex is
+
     random_vertex = st.get_random_node()
+
     p_move, p_imove = p_of_move_imove(
         st, random_vertex, lambda_prime, prob_divisor=prob_divisor
     )
@@ -59,14 +62,13 @@ def one_iteration(st, lambda_prime, prob_divisor=4):
     moveq, imoveq = p_move > r1, p_imove > r2
 
     # if both a move and inverse move would be accepted instead do nothing.
-    if moveq and imoveq:
+    if moveq and imoveq > r2:
         return p_move
 
     if moveq:
         st.move(random_vertex)
 
     if imoveq:
-
         st.inverse_move(random_vertex)
     return p_move
 
@@ -77,7 +79,7 @@ def run(
     lambda_prime,
     debug=False,
     debug_interval=1000,
-    max_size=100 * 100 * 10,
+    max_size=3 * 32 * 64,
     size_cutoff=0,
     prob_divisor=4,
 ):
@@ -99,44 +101,45 @@ def run(
         # do num_moves iterations on st.
         for i in range(num_moves):
 
-            if len(st.nodes) == size_cutoff:
-                print(len(st.nodes))
+            if len(st.data) == size_cutoff:
+                print(len(st.data))
                 raise ValueError("hit size cutoff")
-            pmove = one_iteration(st, lambda_prime, prob_divisor=prob_divisor)
+            p_move = one_iteration(st, lambda_prime, prob_divisor=prob_divisor)
+            # print(st_history)
+            st_history.append(st_history[-1] + p_move)
             # if debugging is turned on and we have reached the debug interval
             if debug and i % debug_interval == 0:
                 # print the percent complete.abs(x)
                 print(np.round(float(i) / num_moves * 100.0, decimals=2))
-                print("there are " + str(len(st.nodes)) + " nodes")
-                # print(str(i) + "-----" + str(st.space_slice_sizes))
+                print(i)
+                print("there are " + str(st.num_nodes) + " nodes")
 
-                """
-                This is where i would like to copy the current state of the
-                space_time and put it in to st_history to be returned.
-                """
+                # plt.imshow(st.show())
+                # plt.show()
+                # print(str(i) + "-----" + str(st.spatial_slice_sizes))
 
-            st_history.append(pmove)
             # if the unviverse gets to small throw an error
             # add checks for to large aswell.
             # are there any other checks you can do?
-            if np.min(st.space_slice_sizes) == 1:
+            if np.min(st.spatial_slice_sizes) == 1:
                 raise ValueError(
                     "The universe shrunk to a point at some particular time! "
                 )
-            if len(st.nodes) >= max_size:
-                print(len(st.nodes))
+            if st.num_nodes >= max_size:
+                print(len(st.data))
                 raise ValueError(
                     "The universe is to big and its slowing down the simulation "
                 )
     except Exception as e:
+        print(st_history)
+        return st_history
+        import traceback
+
         # pass
         # error return off
         print("universe failed, " + str(e))
-        # print(st.space_slice_sizes)
-        print(st_history)
-        import traceback
-
         traceback.print_exc()
+        # print(st.spatial_slice_sizes)
     return st_history
 
 
@@ -158,14 +161,17 @@ def do_sensemble(
         a modified cosmological constant (float)
         It returns a list of all the simulated unvierses.
     """
-    import multiprocessing
-
-    pool = multiprocessing.Pool(multiprocessing.cpu_count())
-
     ensemble = []
     for i in range(num_samples):
-        st = make_flat_spacetime(i_space_size, i_time_size)
-        pool.apply(run, (st, num_iter, lambda_prime))
-        # run
+        st = space_time(slice_size=i_space_size, num_slices=i_time_size)
+        run(
+            st,
+            num_iter,
+            lambda_prime,
+            debug=False,
+            debug_interval=10 ** 3,
+            prob_divisor=prob_divisor,
+            max_size=max_size,
+        )
         ensemble.append(st)
     return ensemble

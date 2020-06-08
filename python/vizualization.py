@@ -320,17 +320,20 @@ def vizualize_space_time_2d(space_time, seed=0):
             # print(adjacent_node_x)
             # this wont plot deges that are to long (i.e longer than the
             # shortest spatial slice)
-            # if (this_x - adjacent_node_x) ** 2 + (this_y - adjacent_node_y) ** 2 < (
-            #     minSpaceSize * 0.5
-            # ) ** 2:
-            ax.plot(
-                [this_x, adjacent_node_x], [this_y, adjacent_node_y], "Black", alpha=0.3
-            )
+            if (this_x - adjacent_node_x) ** 2 + (this_y - adjacent_node_y) ** 2 < (
+                minSpaceSize * 0.5
+            ) ** 2:
+                ax.plot(
+                    [this_x, adjacent_node_x],
+                    [this_y, adjacent_node_y],
+                    "Black",
+                    alpha=0.3,
+                )
 
     # this draws the nodes
-    # for node, coord in coord_dict.items():
-    # ax.scatter(coord[0], coord[1],c = "blue")
-    # ax.annotate(np.round(np.random.random(),2), (coord[0], coord[1]))
+    for node, coord in coord_dict.items():
+        ax.scatter(coord[0], coord[1], c="blue")
+        ax.annotate(np.round(np.random.random(), 2), (coord[0], coord[1]))
 
     # plt.savefig(str(seed) + ".png")
     plt.axis("off")
