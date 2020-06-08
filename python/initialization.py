@@ -32,12 +32,12 @@ def make_flat_spacetime(n_space_slices, n_time_slices):
 
         # connect the future and past nodes
         n = fst.get_node(x, next_time_index)
-        node1.future[n.index] = n
+        node1.future.append(n.index)
         n = fst.get_node(next_space_index, next_time_index)
-        node1.future[n.index] = n
+        node1.future.append(n.index)
         n = fst.get_node(x, past_time_index)
-        node1.past[n.index] = n
+        node1.past.append(n.index)
         n = fst.get_node(prev_space_index, past_time_index)
-        node1.past[n.index] = n
+        node1.past.append(n.index)
 
     return fst

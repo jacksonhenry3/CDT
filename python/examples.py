@@ -6,7 +6,7 @@
 3. make sure all futures and pasts have only one of each value
 4. make sure all future and pasts do not contain an entire spatial slcie
 5. make sure all spatial slices are suffeciently large
-6. validate that no edges cross
+6. validate that no edges cross >?????
 7.
 """
 
@@ -25,11 +25,22 @@ def moving_average(a, n=3):
 
 
 # Test 1, visualize a small space-time after one move
-# st = space_time.space_time()
+st = space_time.space_time()
+st.generate_flat(100, 10)
+run(st, 10 ** 6, 0.61, debug=True, debug_interval=1000)
+plt.imshow(st.adjacency_matrix())
+plt.show()
+# print()
+
+
+# def time_index(n, t):
+#     return t
 #
-# st.generate_flat(16, 32)
-# st.move(st.nodes[15])
-# plt.imshow(st.adjacency())
+#
+# a = st.loop(time_index)
+# print(len(a))
+# run(st, 10 ** 5, 0.6, debug=True, debug_interval=1000)
+# plt.imshow(st.adjacency_matrix())
 # plt.show()
 
 
@@ -49,11 +60,11 @@ def moving_average(a, n=3):
 # =======================================================
 
 # Test 3, visualize a large space-time after many moves and inverse moves
-st = space_time.space_time()
-st.generate_flat(50, 50)
+# st = space_time.space_time()
+# st.generate_flat(30, 30)
 # for i in range(10):
 #     st.inverse_move(st.get_random_node())
-size = run(st, 10 ** 6, 0.69, debug=True, debug_interval=10000)
+# size = run(st, 10 ** 4, 0.69, debug=True, debug_interval=10000)
 # size = moving_average(size, n=20000)
 # size = [s / (i + 1) for i, s in enumerate(size)]
 # plt.plot(size, ".")
