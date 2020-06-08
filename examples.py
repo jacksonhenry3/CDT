@@ -60,14 +60,13 @@ import space_time
 # =======================================================
 
 # Test 4, test dependance on cosmological constant (long)
-lambdas = np.linspace(0.5, 0.7, 100)
+lambdas = np.linspace(0.6, 0.7, 100)
 sizes = []
+
 for Lambda in lambdas:
-    print((Lambda - 0.5) / 0.2)
-    ensemble = do_sensemble(10, 10 ** 3, 64, 32, Lambda)
-    ensemble_avg_size = np.mean([len(st.nodes) / (32.0 * 64.0) for st in ensemble])
-    for st in ensemble:
-        print(len(st.nodes))
+    print((Lambda - 0.6) / 0.1)
+    ensemble = do_sensemble(10, 10 ** 5, 32, 32, Lambda)
+    ensemble_avg_size = np.mean([len(st.nodes) / (32.0 * 32.0) for st in ensemble])
     sizes.append(ensemble_avg_size)
 plt.plot(lambdas, sizes, ".")
 plt.xlabel("Lambda prime")

@@ -58,7 +58,7 @@ def one_iteration(st, lambda_prime, prob_divisor=4):
 
     # if both a move and inverse move would be accepted instead do nothing.
     if moveq and imoveq:
-        return p_move
+        return st
 
     if moveq:
         st.move(random_vertex)
@@ -66,7 +66,7 @@ def one_iteration(st, lambda_prime, prob_divisor=4):
     if imoveq:
 
         st.inverse_move(random_vertex)
-    return p_move
+    return st
 
 
 def run(
@@ -84,11 +84,6 @@ def run(
         is printed and the state of the universe is recorderd every
         debug_interval iterations.
     """
-
-    """
-    I would like to be able to record the full state of the unviverse each debug
-    interval but i am having problems copying the state properly.
-    """
     st_history = [0]
 
     # i was told there is something better than a try except here but i dont
@@ -100,23 +95,13 @@ def run(
             if len(st.nodes) == size_cutoff:
                 print(len(st.nodes))
                 raise ValueError("hit size cutoff")
-            pmove = one_iteration(st, lambda_prime, prob_divisor=prob_divisor)
+            st = one_iteration(st, lambda_prime, prob_divisor=prob_divisor)
             # if debugging is turned on and we have reached the debug interval
             if debug and i % debug_interval == 0:
                 # print the percent complete.abs(x)
                 print(np.round(float(i) / num_moves * 100.0, decimals=2))
                 print("there are " + str(len(st.nodes)) + " nodes")
-                # print(str(i) + "-----" + str(st.space_slice_sizes))
 
-                """
-                This is where i would like to copy the current state of the
-                space_time and put it in to st_history to be returned.
-                """
-
-            st_history.append(pmove)
-            # if the unviverse gets to small throw an error
-            # add checks for to large aswell.
-            # are there any other checks you can do?
             if np.min(st.space_slice_sizes) == 1:
                 raise ValueError(
                     "The universe shrunk to a point at some particular time! "
@@ -131,11 +116,11 @@ def run(
         # error return off
         print("universe failed, " + str(e))
         # print(st.space_slice_sizes)
-        print(st_history)
-        import traceback
-
-        traceback.print_exc()
-    return st_history
+        # print(st_history)
+        # import traceback
+        #
+        # traceback.print_exc()
+    return st
 
 
 def do_sensemble(
@@ -165,12 +150,11 @@ def do_sensemble(
     for i in range(num_samples):
         st = space_time()
         st.generate_flat(32, 32)
-        space_times.append(st)
-        res = pool.apply_async(run, (space_times[-1], num_iter, lambda_prime))
+        res = pool.apply_async(run, (st, num_iter, lambda_prime))
         promise_ensemble.append(res)
-
-    for i, prommise in enumerate(promise_ensemble):
-        prommise.get()
-        print("complete " + str(i))
-
+    i = 0
+    for prommise in promise_ensemble:
+        space_times.append(prommise.get())
+        i += 1
+        print(i)
     return space_times
