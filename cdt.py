@@ -1,9 +1,7 @@
 # pretty sure all of this importing  is unnsescsary
 # from initialization import make_flat_spacetime
 import numpy as np
-
-# from space_time import space_time
-# from copy import deepcopy as copy
+from space_time import space_time
 
 
 def p_of_move_imove(st, n, lambda_prime, prob_divisor=4):
@@ -162,10 +160,17 @@ def do_sensemble(
 
     pool = multiprocessing.Pool(multiprocessing.cpu_count())
 
-    ensemble = []
+    promise_ensemble = []
+    space_times = []
     for i in range(num_samples):
-        st = make_flat_spacetime(i_space_size, i_time_size)
-        pool.apply(run, (st, num_iter, lambda_prime))
-        # run
-        ensemble.append(st)
-    return ensemble
+        st = space_time()
+        st.generate_flat(32, 32)
+        space_times.append(st)
+        res = pool.apply_async(run, (space_times[-1], num_iter, lambda_prime))
+        promise_ensemble.append(res)
+
+    for i, prommise in enumerate(promise_ensemble):
+        prommise.get()
+        print("complete " + str(i))
+
+    return space_times

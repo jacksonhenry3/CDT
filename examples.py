@@ -11,40 +11,21 @@
 """
 
 from cdt import *
-from initialization import make_flat_spacetime
+
+# from initialization import make_flat_spacetime
 from vizualization import vizualize_space_time_2d
 import matplotlib.pyplot as plt
 import numpy as np
 import space_time
 
 
-def moving_average(a, n=3):
-    ret = np.cumsum(a, dtype=float)
-    ret[n:] = ret[n:] - ret[:-n]
-    return ret[n - 1 :] / n
-
-
 # Test 1, visualize a small space-time after one move
-st = space_time.space_time()
-st.generate_flat(100, 10)
-run(st, 10 ** 6, 0.61, debug=True, debug_interval=1000)
-plt.imshow(st.adjacency_matrix())
-plt.show()
-# print()
-
-
-# def time_index(n, t):
-#     return t
-#
-#
-# a = st.loop(time_index)
-# print(len(a))
-# run(st, 10 ** 5, 0.6, debug=True, debug_interval=1000)
+# st = space_time.space_time()
+# st.generate_flat(10, 10)
+# st.move(st.get_random_node())
 # plt.imshow(st.adjacency_matrix())
 # plt.show()
-
-
-# check_adjacent(st)
+#
 # vizualize_space_time_2d(st)
 
 # =======================================================
@@ -61,38 +42,38 @@ plt.show()
 
 # Test 3, visualize a large space-time after many moves and inverse moves
 # st = space_time.space_time()
-# st.generate_flat(30, 30)
-# for i in range(10):
-#     st.inverse_move(st.get_random_node())
-# size = run(st, 10 ** 4, 0.69, debug=True, debug_interval=10000)
-# size = moving_average(size, n=20000)
-# size = [s / (i + 1) for i, s in enumerate(size)]
-# plt.plot(size, ".")
-# plt.show()
-# print("getting mat")
-# plt.imshow(st.adjacency())
+# st.generate_flat(100, 10)
+#
+# run(
+#     st,
+#     10 ** 5,
+#     0.6,
+#     debug=True,
+#     debug_interval=1000,
+#     max_size=100 * 100 * 10,
+#     size_cutoff=0,
+#     prob_divisor=4,
+# )
+# plt.imshow(st.adjacency_matrix())
 # plt.axis("off")
-# print("disping mat")
-# put a red dot, size 40, at 2 locations:
-# plt.scatter(x=[30, 40], y=[50, 60], c="r", s=40)
 # plt.show()
-# vizualize_space_time_2d(st)
-# Graph = networkx.from_numpy_matrix(st.adjacency())
 # =======================================================
 
 # Test 4, test dependance on cosmological constant (long)
-# lambdas = np.linspace(0.6, 0.7, 10)
-# sizes = []
-# for Lambda in lambdas:
-#     print((Lambda - 0.6) / 0.1)
-#     ensemble = do_sensemble(10, 10 ** 2, 64, 32, Lambda)
-#     ensemble_avg_size = np.mean([len(st.nodes) / (32.0 * 64.0) for st in ensemble])
-#     sizes.append(ensemble_avg_size)
-# plt.plot(lambdas, sizes, ".")
-# plt.xlabel("Lambda prime")
-# plt.ylabel("Size of universe")
-# plt.title("average size of 10 universes")
-# plt.show()
+lambdas = np.linspace(0.5, 0.7, 100)
+sizes = []
+for Lambda in lambdas:
+    print((Lambda - 0.5) / 0.2)
+    ensemble = do_sensemble(10, 10 ** 3, 64, 32, Lambda)
+    ensemble_avg_size = np.mean([len(st.nodes) / (32.0 * 64.0) for st in ensemble])
+    for st in ensemble:
+        print(len(st.nodes))
+    sizes.append(ensemble_avg_size)
+plt.plot(lambdas, sizes, ".")
+plt.xlabel("Lambda prime")
+plt.ylabel("Size of universe")
+plt.title("average size of 10 universes")
+plt.show()
 
 # =======================================================
 
