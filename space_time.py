@@ -2,31 +2,34 @@ from node import node
 import numpy as np
 import random as r
 
-r.seed(0)
+# r.seed(0)
 
-# MAKE SURE ASL INDICES ARE UNIQUE!!
+# MAKE SURE ALL INDICES ARE UNIQUE!!
 class space_time(object):
     """space_time objects contain all nodes and their connections.
      They also allow for ergotic forward and inverse moves
      """
 
-    __slots__ = ["nodes", "max_index"]
+    __slots__ = ["nodes", "max_index", "origin", "invalid_nodes", "history"]
 
     def __init__(self):
         super(space_time, self).__init__()
         self.nodes = {}  # a dictionairy from of all node ids to nodes.
         self.max_index = 0
+        self.origin = 0
+        self.invalid_nodes = []
+        self.history = []
 
     # utilities
     def loop(self, func, start_index=None):
         """loops through all nodes arround each spatial slice sequentially strating at
         start_index,
-        the result will be a dictionairy of node_index:func(n, time_index) """
-
+        the result will be a dictionairy of node_index:func(n, time_index, index) """
         if start_index is None:
-            start_index = self.max_index - 1
+            start_index = self.origin
 
         if start_index not in self.nodes:
+            print(start_index)
             print("bad start")
             return
 
@@ -38,13 +41,16 @@ class space_time(object):
         time_index = 0
         used_node_indices = []
         index = 0
+        space_index = 0
         while n.index not in used_node_indices:
-            result_dict[n.index] = func(n, time_index, index)
+            result_dict[n.index] = func(n, time_index, space_index, index)
             used_node_indices.append(n.index)
             n = self.get_node(n.right)
+            space_index += 1
             index += 1
 
             if n.index == row_start:
+                space_index = 0
                 time_index += 1
                 n = self.get_node(n.future[0])
                 row_start = n.index
@@ -55,12 +61,12 @@ class space_time(object):
             print("there are already nodes! This can only run on a new space_time")
             return ()
 
-        for spacial_slice in range(space_size):
-            for time_slice in range(time_size):
+        for time_slice in range(time_size):
+            for spacial_slice in range(space_size):
                 node(self)
 
-        for spacial_slice in range(space_size):
-            for time_slice in range(time_size):
+        for time_slice in range(time_size):
+            for spacial_slice in range(space_size):
                 index = time_size * spacial_slice + time_slice
                 n = self.get_node(index)
                 n.replace_right(
@@ -85,7 +91,7 @@ class space_time(object):
         return list(self.nodes.values())[index]
 
     def space_slice_sizes(self, start=None):
-        time_indices = list(self.loop(lambda n, t, i: t, start_index=start).values())
+        time_indices = list(self.loop(lambda n, t, x, i: t, start_index=start).values())
         unique, counts = np.unique(time_indices, return_counts=True)
         res = unique
         for index in unique:
@@ -151,13 +157,24 @@ class space_time(object):
         old_node.right = new_node.index
 
         self.nodes[new_node.index] = new_node
+        if old_node in self.invalid_nodes:
+            self.invalid_nodes.append(new_node)
+
+        if not new_node.validate():
+            self.invalid_nodes.append(new_node.index)
+            # raise ValueError("a move created an invalid node {}".format(new_node))
+        if not old_node.validate():
+            self.invalid_nodes.append(old_node.index)
+        # raise ValueError("a move created an invalid node {}".format(old_node))
 
     def inverse_move(self, random_node):
         """ merges random_node with random_node.right"""
 
         # adds the past and future of random_node.right to random_node
         if random_node.right == random_node.index:
-            raise Exception("a spatial layer has only a single node!")
+            # raise Exception("a spatial layer has only a single node!")
+            print("inverse move is invalid becouse this node is its own neighbor")
+            return ()
         for new_past_node in self.get_node(random_node.right).past:
             # print(self.get_node(random_node.right).past)
             random_node.add_past(self.get_node(new_past_node))
@@ -177,31 +194,45 @@ class space_time(object):
         prev_right = self.get_node(random_node.right)
         random_node.right = prev_right.right
 
+        if prev_right.index == self.origin:
+            self.origin = prev_right.right
         # remove random_node.right from self
         # print("Premptive one " +if random_node.future str(random_node.right))
+        if self.nodes[prev_right.index] in self.invalid_nodes:
+            self.invalid_nodes.append(random_node)
+
+        if self.nodes[prev_right.index] in self.invalid_nodes:
+            self.invalid_nodes.append(random_node)
+
+        if not random_node.validate():
+            self.invalid_nodes.append(random_node.index)
+
         del self.nodes[prev_right.index]
 
     # useful for visualizations
     def adjacency_matrix(self):
 
-        row_idex_dict = {}
-        slice_sep = 2
-        n_start = list(self.nodes.values())[0]
+        for n in self.nodes.values():
+            if not n.validate():
+                self.invalid_nodes.append(n.index)
 
+        row_idex_dict = {}
+        slice_sep = 1
+        n_start = list(self.nodes.values())[0]
         row_idex_dict = self.loop(
-            lambda n, t, i: i + slice_sep * (t + 1), n_start.index
+            lambda n, t, x, i: i + slice_sep * (t + 1), n_start.index
         )
         num_time_slices = len(self.space_slice_sizes())
         array_size = len(self.nodes) + slice_sep * num_time_slices
         m = np.zeros((array_size, array_size))
         for i, n in enumerate(self.nodes.values()):
-
-            m[row_idex_dict[n.index], row_idex_dict[n.right]] = 1
-            m[row_idex_dict[n.index], row_idex_dict[n.left]] = 1
+            ro_idx = row_idex_dict[n.index]
+            m[ro_idx, row_idex_dict[n.right]] = self.inv(n.index, n.right)
+            m[ro_idx, row_idex_dict[n.left]] = self.inv(n.index, n.left)
             for f in n.future:
-                m[row_idex_dict[n.index], row_idex_dict[f]] = 1
+                m[ro_idx, row_idex_dict[f]] = self.inv(n.index, f)
             for p in n.past:
-                m[row_idex_dict[n.index], row_idex_dict[p]] = 1
+                m[ro_idx, row_idex_dict[p]] = self.inv(n.index, p)
 
         if slice_sep != 0:
             total_prev_nodes = np.cumsum(self.space_slice_sizes(start=n_start.index))
@@ -215,4 +246,15 @@ class space_time(object):
                         m[j, index - width] += 0.25
         return m
 
-    # Tests
+    def validate(self):
+        allnodes = True
+        for node_index in self.nodes:
+            allnodes = allnodes and self.get_node(node_index).validate()
+        # if allnodes:
+        #     print("all nodes pass")
+        return allnodes
+
+    def inv(self, i, j):
+        if i in self.invalid_nodes or j in self.invalid_nodes:
+            return 2
+        return 1

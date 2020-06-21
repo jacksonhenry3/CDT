@@ -41,38 +41,70 @@ import space_time
 # =======================================================
 
 # Test 3, visualize a large space-time after many moves and inverse moves
-# st = space_time.space_time()
-# st.generate_flat(100, 10)
-#
+st = space_time.space_time()
+import time
+
+start = time.time()
+st.generate_flat(32, 32)
+
 # run(
 #     st,
 #     10 ** 5,
 #     0.6,
 #     debug=True,
-#     debug_interval=1000,
+#     debug_interval=100,
 #     max_size=100 * 100 * 10,
 #     size_cutoff=0,
 #     prob_divisor=4,
 # )
-# plt.imshow(st.adjacency_matrix())
-# plt.axis("off")
-# plt.show()
+for l in np.linspace(0.6, 0.7, 25):
+    sts = do_sensemble(12, 10 ** 4, 64, 64, l, prob_divisor=4, max_size=32 * 64 * 3)
+    plt.plot(np.mean([np.sum(st.history, axis=1) for st in sts], axis=0))
+plt.show()
+
 # =======================================================
 
 # Test 4, test dependance on cosmological constant (long)
-lambdas = np.linspace(0.6, 0.7, 100)
-sizes = []
-
-for Lambda in lambdas:
-    print((Lambda - 0.6) / 0.1)
-    ensemble = do_sensemble(10, 10 ** 5, 32, 32, Lambda)
-    ensemble_avg_size = np.mean([len(st.nodes) / (32.0 * 32.0) for st in ensemble])
-    sizes.append(ensemble_avg_size)
-plt.plot(lambdas, sizes, ".")
-plt.xlabel("Lambda prime")
-plt.ylabel("Size of universe")
-plt.title("average size of 10 universes")
-plt.show()
+# x_size = 64
+# t_size = 64
+#
+# import time
+#
+# for pow in range(10):
+#     lambdas = np.linspace(0.5, 0.8, 25)
+#     sizes = np.array([])
+#
+#     ensemble_avg_sizes = []
+#     start = time.time()
+#     lambda_x = np.array([])
+#     num_samp = 12
+#     for Lambda in lambdas:
+#         percent_complete = (Lambda - 0.5) / 0.3
+#         print("starting")
+#         ensemble = do_sensemble(num_samp, 10 ** 4 * pow, x_size, t_size, Lambda)
+#         ensemble_avg_size = np.mean(
+#             [len(st.nodes) / (x_size * t_size) for st in ensemble]
+#         )
+#         ensemble_avg_sizes.append(ensemble_avg_size)
+#         sizes = np.append(sizes, [len(st.nodes) / (x_size * t_size) for st in ensemble])
+#         time_elapsed = time.time() - start
+#         lambda_x = np.append(lambda_x, np.full(len(ensemble), Lambda))
+#         # print("{:.2f}".format(percent_complete * 100) + " percent compelte")
+#         print(
+#             "time elapsed {:.0f}/{:.0f} minutes".format(
+#                 time_elapsed / 60.0, (1.0 / percent_complete) * time_elapsed / 60.0
+#             ),
+#             end="\r",
+#         )
+#
+#         print()
+#     plt.plot(lambda_x, sizes, ".", alpha=0.3)
+#     plt.plot(lambdas, ensemble_avg_sizes, "-k")
+# plt.xlabel("Lambda prime")
+# plt.ylabel("Size of universe")
+# plt.title("average size of {} universes".format(num_samp))
+# plt.show()
+# print(ensemble_avg_sizes)
 
 # =======================================================
 

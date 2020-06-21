@@ -1,7 +1,7 @@
 # pretty sure all of this importing  is unnsescsary
-# from initialization import make_flat_spacetime
-import numpy as np
 from space_time import space_time
+from random import random
+from math import e as e
 
 
 def p_of_move_imove(st, n, lambda_prime, prob_divisor=4):
@@ -28,13 +28,8 @@ def p_of_move_imove(st, n, lambda_prime, prob_divisor=4):
     n_f = len(n.future)
 
     # these proabbilities are given by equation israel et al 37 and 38
-    prob_move = (
-        n_n / (n_n + 1) * (n_p * n_f) * np.e ** (-1 * lambda_prime) / prob_divisor
-    )
-    # prob_move = 4 * np.e ** (-1 * lambda_prime) / prob_divisor
-    prob_imove = np.e ** lambda_prime / prob_divisor
-    # prob_move = 4 * np.e ** (-1 * lambda_prime) / prob_divisor
-    # prob_imove = np.e ** lambda_prime / prob_divisor
+    prob_move = n_n / (n_n + 1) * (n_p * n_f) * e ** (-1 * lambda_prime) / prob_divisor
+    prob_imove = e ** lambda_prime / prob_divisor
     return [prob_move, prob_imove]
 
 
@@ -51,8 +46,8 @@ def one_iteration(st, lambda_prime, prob_divisor=4):
         st, random_vertex, lambda_prime, prob_divisor=prob_divisor
     )
 
-    r1 = np.random.random()
-    r2 = np.random.random()
+    r1 = random()
+    r2 = random()
 
     moveq, imoveq = p_move > r1, p_imove > r2
 
@@ -84,7 +79,6 @@ def run(
         is printed and the state of the universe is recorderd every
         debug_interval iterations.
     """
-    st_history = [0]
 
     # i was told there is something better than a try except here but i dont
     # remember what it was
@@ -99,13 +93,15 @@ def run(
             # if debugging is turned on and we have reached the debug interval
             if debug and i % debug_interval == 0:
                 # print the percent complete.abs(x)
-                print(np.round(float(i) / num_moves * 100.0, decimals=2))
+                print(
+                    "{} percent complete".format(round(float(i) / num_moves * 100.0, 2))
+                )
                 print("there are " + str(len(st.nodes)) + " nodes")
 
-            if np.min(st.space_slice_sizes) == 1:
-                raise ValueError(
-                    "The universe shrunk to a point at some particular time! "
-                )
+            # if min(st.space_slice_sizes()) == 1:
+            #     raise ValueError(
+            #         "The universe shrunk to a point at some particular time! "
+            #     )
             if len(st.nodes) >= max_size:
                 print(len(st.nodes))
                 raise ValueError(
@@ -144,17 +140,19 @@ def do_sensemble(
     import multiprocessing
 
     pool = multiprocessing.Pool(multiprocessing.cpu_count())
+    # pool = multiprocessing.Pool(10)
 
     promise_ensemble = []
     space_times = []
     for i in range(num_samples):
         st = space_time()
-        st.generate_flat(32, 32)
+        st.generate_flat(i_space_size, i_time_size)
         res = pool.apply_async(run, (st, num_iter, lambda_prime))
         promise_ensemble.append(res)
     i = 0
     for prommise in promise_ensemble:
         space_times.append(prommise.get())
         i += 1
-        print(i)
+        # print(i)
+    pool.terminate()
     return space_times

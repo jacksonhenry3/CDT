@@ -1,4 +1,4 @@
-import numpy as np  # is this nescesary? Unlikely.
+from math import pi
 from collections import Counter
 
 
@@ -47,7 +47,7 @@ class node(object):
 
     def R(self, a=1):
         n = self.num_connections()
-        return ((n - 6.0) * np.pi / 3.0) / (1 / 3.0 * n * a)
+        return ((n - 6.0) * pi / 3.0) / (1 / 3.0 * n * a)
 
     # modify node
 
@@ -101,11 +101,11 @@ class node(object):
 
     def has_left(self):
         """Checks if self has a proper left"""
-        return isinstance(self.left, int) and self.left in self.st.nodes
+        return isinstance(self.left, int) and self.left in self.space_time.nodes
 
     def has_right(self):
         """Checks if self has a proper right"""
-        return isinstance(self.right, int) and self.right in self.st.nodes
+        return isinstance(self.right, int) and self.right in self.space_time.nodes
 
     def has_past(self):
         """Checks if self has a valid past"""
@@ -114,7 +114,7 @@ class node(object):
             return False
         # check each node in past to make sure its a valid node
         for p in self.past:
-            if p not in self.st.nodes:
+            if p not in self.space_time.nodes:
                 return False
         return True
 
@@ -125,7 +125,7 @@ class node(object):
             return False
         # check each node in future to make sure its a valid node
         for f in self.future:
-            if f not in self.st.nodes:
+            if f not in self.space_time.nodes:
                 return False
         return True
 
@@ -141,10 +141,10 @@ class node(object):
         """ Returns true if the future of node fills an entire slice"""
         f0 = self.future[0]
         future_slice = []
-        f = self.st.get_node(f0)
+        f = self.space_time.get_node(f0)
         while f.index not in future_slice:
             future_slice.append(f.index)
-            f = self.st.get_node(f.right)
+            f = self.space_time.get_node(f.right)
         if len(self.future) == len(future_slice):
             return True
         return False
@@ -153,10 +153,55 @@ class node(object):
         """ Returns true if the past of node fills an entire slice"""
         f0 = self.past[0]
         past_slice = []
-        f = self.st.get_node(f0)
+        f = self.space_time.get_node(f0)
         while f.index not in past_slice:
             past_slice.append(f.index)
-            f = self.st.get_node(f.right)
+            f = self.space_time.get_node(f.right)
         if len(self.past) == len(past_slice):
             return True
         return False
+
+    def validate(self):
+        hasleft = self.has_left()
+        hasright = self.has_right()
+        haspast = self.has_past()
+        hasfuture = self.has_future()
+        uniquepast = self.has_unique_past()
+        uniquefuture = self.has_unique_future()
+        future_to_big = self.future_fills_slice()
+        past_to_big = self.past_fills_slice()
+
+        if not hasleft:
+            print("{}: left is empty or broken".format(self))
+
+        if not hasright:
+            print("{}: right is empty or broken".format(self))
+
+        if not haspast:
+            print("{}: past is empty or broken".format(self))
+
+        if not hasfuture:
+            print("{}: future is empty or broken".format(self))
+
+        if not uniquepast:
+            print("{}: past has duplicates".format(self))
+
+        if not uniquefuture:
+            print("{}: future has duplicates".format(self))
+
+        if future_to_big:
+            print("{}: future fills a slice".format(self))
+
+        if past_to_big:
+            print("{}: past fills a slice".format(self))
+
+        return (
+            hasleft
+            and hasright
+            and haspast
+            and hasfuture
+            and uniquepast
+            and uniquefuture
+            and not future_to_big
+            and not past_to_big
+        )
