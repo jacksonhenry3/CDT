@@ -1,260 +1,146 @@
-from node import node
-import numpy as np
-import random as r
+import random
 
-# r.seed(0)
+random.seed(1)
 
-# MAKE SURE ALL INDICES ARE UNIQUE!!
+
 class space_time(object):
-    """space_time objects contain all nodes and their connections.
-     They also allow for ergotic forward and inverse moves
-     """
+    """
+    the data array holds a list of each spatial slice. Each spatial slice contain one
+    value for each triangle in that slice. The value indicates weather the triangle is
+    upwards pointing (1) or downwards pointing (0)
+    """
 
-    __slots__ = ["nodes", "max_index", "origin", "invalid_nodes", "history"]
-
-    def __init__(self):
+    def __init__(self, time_size, space_size, data=None):
+        """
+        time_size must be even. Space size can be arbitrary. If you want to initialize
+        a space_time with exisiting data these two params will be overwritten
+        """
         super(space_time, self).__init__()
-        self.nodes = {}  # a dictionairy from of all node ids to nodes.
-        self.max_index = 0
-        self.origin = 0
-        self.invalid_nodes = []
-        self.history = []
 
-    # utilities
-    def loop(self, func, start_index=None):
-        """loops through all nodes arround each spatial slice sequentially strating at
-        start_index,
-        the result will be a dictionairy of node_index:func(n, time_index, index) """
-        if start_index is None:
-            start_index = self.origin
+        if data is None:
+            self.data = [
+                [[(i + j) % 2, 0] for i in range(space_size)] for j in range(time_size)
+            ]
+        else:
+            self.data = data
 
-        if start_index not in self.nodes:
-            print(start_index)
-            print("bad start")
-            return
+        # time size will not change
+        self.time_size = len(self.data)
 
-        result_dict = {}
-        n_start = self.get_node(start_index)
-        row_start = n_start.index
-        n = n_start
+        # these change with moves and inverse moves
+        # a possible validation test would be to recalculate and compare.
+        self.spatial_slice_sizes = [len(slice) for slice in self.data]
+        self.length = sum(self.spatial_slice_sizes)
+        self.totalChanges = 0
 
-        time_index = 0
-        used_node_indices = []
-        index = 0
-        space_index = 0
-        while n.index not in used_node_indices:
-            result_dict[n.index] = func(n, time_index, space_index, index)
-            used_node_indices.append(n.index)
-            n = self.get_node(n.right)
-            space_index += 1
-            index += 1
+    def connected_to(self, x, t, disp=False):
+        slice = self.data[t]
+        direction = slice[x][0]
 
-            if n.index == row_start:
-                space_index = 0
-                time_index += 1
-                n = self.get_node(n.future[0])
-                row_start = n.index
-        return result_dict
+        idx = 0
+        for prev_dir in slice[:x]:
+            if prev_dir[0] == direction:
+                idx += 1
 
-    def generate_flat(self, space_size, time_size):
-        if self.max_index > 0:
-            print("there are already nodes! This can only run on a new space_time")
-            return ()
+        # connect it to the the !"direction" pointing triangle
+        t2 = int((t + (direction - 0.5) * 2)) % self.time_size
 
-        for time_slice in range(time_size):
-            for spacial_slice in range(space_size):
-                node(self)
+        count = 0
+        # x3 = 0
 
-        for time_slice in range(time_size):
-            for spacial_slice in range(space_size):
-                index = time_size * spacial_slice + time_slice
-                n = self.get_node(index)
-                n.replace_right(
-                    time_size * ((spacial_slice - 1) % space_size) + time_slice
-                )
+        for i, prev_dir in enumerate(self.data[t2]):
+            if prev_dir[0] != direction:
 
-                n.replace_future(
-                    [
-                        time_size * spacial_slice + (time_slice + 1) % time_size,
-                        time_size * ((spacial_slice + 1) % space_size)
-                        + (time_slice + 1) % time_size,
-                    ]
-                )
+                if count == idx:
+                    x3p = i
+                    break
+                count += 1
 
-    def get_node(self, index):
-        "returns the node at index"
-        return self.nodes[index]
+        if disp:
+            return (x3p, int((t + (direction - 0.5) * 2)))
+        return (x3p, t2)
 
-    def get_random_node(self):
-        """ Does what it says on the tin, gets a random node from self"""
-        index = r.randrange(len(self.nodes))
-        return list(self.nodes.values())[index]
+    def random_vertex(self):
+        random_index = random.randint(0, self.length - 1)
+        total_previous_triangles = 0
+        t = 0
+        while total_previous_triangles <= random_index:
+            t += 1
+            total_previous_triangles += self.spatial_slice_sizes[t - 1]
+        t -= 1
+        total_previous_triangles -= self.spatial_slice_sizes[t]
+        x = random_index - total_previous_triangles
+        return (x, t)
 
-    def space_slice_sizes(self, start=None):
-        time_indices = list(self.loop(lambda n, t, x, i: t, start_index=start).values())
-        unique, counts = np.unique(time_indices, return_counts=True)
-        res = unique
-        for index in unique:
-            res[index] = counts[index]
-        return res
+    # future and past designations are arbitrary
+    def get_future(self, node):
+        # MUST BE VERY CAREFUL ABOUT OFF BY ONE
+        x, t = node
+        slice = self.data[t]
+        value = slice[x][0]
+        xp = (x + 1) % self.spatial_slice_sizes[t]
 
-    # physics
+        future = [xp]
+        while slice[xp][0] != value:
 
-    def move(self, old_node):
-        """
-        Inserts a new node to the right of a random node. The newly created
-        node should have a randomly selected half of the future and half of the
-        past edges of node
-        """
+            xp = (xp + 1) % self.spatial_slice_sizes[t]
+            future.append(xp)
+        return future
 
-        new_node = node(self)
+    def get_past(self, node):
+        # MUST BE VERY CAREGUL ABOUT OFF BY ONE
+        x, t = node
+        x2, t2 = self.connected_to(x, t)
+        slice2 = self.data[t2]
+        value2 = slice2[x2][0]
+        xp2 = (x2 + 1) % self.spatial_slice_sizes[t2]
 
-        # selects a random future and past edge to be split
-        random_future_index = r.choice(old_node.future)
-        random_future_node = self.get_node(random_future_index)
-        random_past_index = r.choice(old_node.past)
-        random_past_node = self.get_node(random_past_index)
+        past = [xp2]
+        while slice2[xp2][0] != value2:
+            xp2 = (xp2 + 1) % self.spatial_slice_sizes[t2]
+            past.append(xp2)
+        return past
 
-        # splits the set of future nodes in two
-        future_left = [random_future_index]
-        future_right = [random_future_index]
-        n = random_future_node.right
-        while n in old_node.future:
-            future_right.append(n)
-            n = self.get_node(n).right
-            if n == random_future_node.right:
-                break
-        future_left += list(set(old_node.future) - set(future_right))
+    def move(self, x, t):
+        value = self.data[t][x][0]
+        t2 = int((t + (value - 0.5) * 2)) % self.time_size
 
-        future_left = np.unique(future_left)
-        future_right = np.unique(future_right)
-        # assigns the two halfs to the new node and the random node
-        # future_left = [self.nodes[index] for index in future_left]
-        old_node.replace_future(future_left)
-        new_node.replace_future(future_right)
+        future = self.get_future((x, t))
+        past = self.get_past((x, t))
+        newt1 = random.choices(future)[0]
 
-        # splits the set of past nodes in two
-        past_left = [random_past_index]
-        past_right = [random_past_index]
-        n = random_past_node.right
-        while n in old_node.past:
-            past_right.append(n)
-            n = self.get_node(n).right
-            if n == random_past_node.right:
-                break
-        past_left += list(set(old_node.past) - set(past_right))
+        newt2 = random.choices(past)[0]
 
-        past_left = np.unique(past_left)
-        past_right = np.unique(past_right)
-        # assigns the two halfs to the new node and the random node
-        old_node.replace_past(past_left)
-        new_node.replace_past(past_right)
+        self.data[t].insert(newt1, [value, 0])
+        self.data[t2].insert(newt2, [(value + 1) % 2, 0])
 
-        # corrects the spatial connections of the new node and the random node
-        new_node.right = old_node.right
-        new_node.left = old_node.index
-        self.get_node(old_node.right).left = new_node.index
-        old_node.right = new_node.index
+        self.spatial_slice_sizes[t] += 1
+        self.spatial_slice_sizes[t2] += 1
+        # print()
+        self.length += 2
+        self.totalChanges += 1
 
-        self.nodes[new_node.index] = new_node
-        if old_node in self.invalid_nodes:
-            self.invalid_nodes.append(new_node)
+    def inverse_move(self, x, t):
+        row = self.data[t]
+        dir = row[x]
+        if dir in row[:x] + row[x + 1 :]:
+            x2, t2 = self.connected_to(x, t)
 
-        if not new_node.validate():
-            self.invalid_nodes.append(new_node.index)
-            # raise ValueError("a move created an invalid node {}".format(new_node))
-        if not old_node.validate():
-            self.invalid_nodes.append(old_node.index)
-        # raise ValueError("a move created an invalid node {}".format(old_node))
+            # self.data[t] = np.delete(self.data[t], x)
+            self.data[t].pop(x)
+            # self.data[t2] = np.delete(self.data[t2], x2)
+            self.data[t2].pop(x2)
 
-    def inverse_move(self, random_node):
-        """ merges random_node with random_node.right"""
+            self.spatial_slice_sizes[t] -= 1
+            self.spatial_slice_sizes[t2] -= 1
+            self.length -= 2
+            self.totalChanges += 1
+        else:
+            print(
+                "Inverse move failed becouse (x,t)-(x2,t2) bounds both sides of a face"
+            )
 
-        # adds the past and future of random_node.right to random_node
-        if random_node.right == random_node.index:
-            # raise Exception("a spatial layer has only a single node!")
-            print("inverse move is invalid becouse this node is its own neighbor")
-            return ()
-        for new_past_node in self.get_node(random_node.right).past:
-            # print(self.get_node(random_node.right).past)
-            random_node.add_past(self.get_node(new_past_node))
-            # print(new_past_node)
-        for new_future_node in self.get_node(random_node.right).future:
-            random_node.add_future(self.get_node(new_future_node))
-
-        random_node.replace_past(np.unique(random_node.past))
-        random_node.replace_future(np.unique(random_node.future))
-
-        # removes the past and future from random_node.right
-        self.get_node(random_node.right).replace_past([])
-        self.get_node(random_node.right).replace_future([])
-
-        # fix the spatial indeced of the remaining random_node
-        self.get_node(self.get_node(random_node.right).right).left = random_node.index
-        prev_right = self.get_node(random_node.right)
-        random_node.right = prev_right.right
-
-        if prev_right.index == self.origin:
-            self.origin = prev_right.right
-        # remove random_node.right from self
-        # print("Premptive one " +if random_node.future str(random_node.right))
-        if self.nodes[prev_right.index] in self.invalid_nodes:
-            self.invalid_nodes.append(random_node)
-
-        if self.nodes[prev_right.index] in self.invalid_nodes:
-            self.invalid_nodes.append(random_node)
-
-        if not random_node.validate():
-            self.invalid_nodes.append(random_node.index)
-
-        del self.nodes[prev_right.index]
-
-    # useful for visualizations
-    def adjacency_matrix(self):
-
-        for n in self.nodes.values():
-            if not n.validate():
-                self.invalid_nodes.append(n.index)
-
-        row_idex_dict = {}
-        slice_sep = 1
-        n_start = list(self.nodes.values())[0]
-        row_idex_dict = self.loop(
-            lambda n, t, x, i: i + slice_sep * (t + 1), n_start.index
-        )
-        num_time_slices = len(self.space_slice_sizes())
-        array_size = len(self.nodes) + slice_sep * num_time_slices
-        m = np.zeros((array_size, array_size))
-        for i, n in enumerate(self.nodes.values()):
-            ro_idx = row_idex_dict[n.index]
-            m[ro_idx, row_idex_dict[n.right]] = self.inv(n.index, n.right)
-            m[ro_idx, row_idex_dict[n.left]] = self.inv(n.index, n.left)
-            for f in n.future:
-                m[ro_idx, row_idex_dict[f]] = self.inv(n.index, f)
-            for p in n.past:
-                m[ro_idx, row_idex_dict[p]] = self.inv(n.index, p)
-
-        if slice_sep != 0:
-            total_prev_nodes = np.cumsum(self.space_slice_sizes(start=n_start.index))
-            total_prev_nodes = np.insert(total_prev_nodes, 0, 0, axis=0)
-            total_prev_nodes = total_prev_nodes[:-1]
-            for i, gutter_index in enumerate(total_prev_nodes):
-                index = gutter_index + (i + 1) * slice_sep - 1
-                for width in range(slice_sep):
-                    for j in range(array_size):
-                        m[index - width, j] += 0.25
-                        m[j, index - width] += 0.25
-        return m
-
-    def validate(self):
-        allnodes = True
-        for node_index in self.nodes:
-            allnodes = allnodes and self.get_node(node_index).validate()
-        # if allnodes:
-        #     print("all nodes pass")
-        return allnodes
-
-    def inv(self, i, j):
-        if i in self.invalid_nodes or j in self.invalid_nodes:
-            return 2
-        return 1
+    def save(self, name="test"):
+        with open(name + ".txt", "w") as filehandle:
+            for listitem in self.data:
+                filehandle.write("%s\n" % listitem)
