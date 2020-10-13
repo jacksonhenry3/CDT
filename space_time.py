@@ -19,7 +19,8 @@ class space_time(object):
 
         if data is None:
             self.data = [
-                [[(i + j) % 2, 0] for i in range(space_size)] for j in range(time_size)
+                [[(i + j) % 2, random.random()] for i in range(space_size)]
+                for j in range(time_size)
             ]
         else:
             self.data = data
@@ -116,14 +117,14 @@ class space_time(object):
 
         self.spatial_slice_sizes[t] += 1
         self.spatial_slice_sizes[t2] += 1
-        # print()
+
         self.length += 2
         self.totalChanges += 1
 
     def inverse_move(self, x, t):
         row = self.data[t]
-        dir = row[x]
-        if dir in row[:x] + row[x + 1 :]:
+        dir = row[x][0]
+        if dir in [item[0] for item in row[:x] + row[x + 1 :]]:
             x2, t2 = self.connected_to(x, t)
 
             # self.data[t] = np.delete(self.data[t], x)
@@ -136,11 +137,12 @@ class space_time(object):
             self.length -= 2
             self.totalChanges += 1
         else:
+            print(row)
             print(
                 "Inverse move failed becouse (x,t)-(x2,t2) bounds both sides of a face"
             )
 
     def save(self, name="test"):
-        with open(name + ".txt", "w") as filehandle:
+        with open("logs/" + name + ".txt", "w") as filehandle:
             for listitem in self.data:
                 filehandle.write("%s\n" % listitem)

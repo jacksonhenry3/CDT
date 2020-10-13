@@ -16,7 +16,7 @@ def run(st, iter, lp, display=False):
     sz = []
     sz.append(st.length)
     for i in range(1, iter + 1):
-        if i % 10 ** 1 == 0 and display is True:
+        if i % 1 == 0 and display is True:
             sz.append(st.length)
 
             sys.stdout.flush()
