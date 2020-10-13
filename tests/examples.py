@@ -16,25 +16,6 @@ import numpy as np
 import space_time
 
 
-# Test 1, visualize a small space-time after one move
-# st = space_time.space_time()
-# st.generate_flat(10, 10)
-# st.move(st.get_random_node())
-# plt.imshow(st.adjacency_matrix())
-# plt.show()
-#
-# vizualize_space_time_2d(st)
-
-# =======================================================
-
-# Test 2, visualize a small space-time after one inverse move
-# st = space_time.space_time()
-# st.generate_flat(16, 32)
-# st.inverse_move(st.nodes[100])
-# # vizualize_space_time_2d(st)
-# plt.imshow(st.adjacency())
-# plt.show()
-
 # =======================================================
 
 # Test 3, visualize a large space-time after many moves and inverse moves

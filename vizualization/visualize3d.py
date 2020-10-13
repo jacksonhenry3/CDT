@@ -71,7 +71,7 @@ def visualize3d(st):
         t = torus_angles[n]["t"]
 
         outer_radius = 8
-        inner_radius = 4 * sss[t] / max(sss)
+        inner_radius = 4  # * sss[t] / max(sss)
 
         # for torus
         x.append((outer_radius + inner_radius * cos(v)) * cos(u))
@@ -110,7 +110,7 @@ def visualize3d(st):
         y,
         z,
         triangles,
-        representation="fancymesh",
+        representation="mesh",
         scalars=scalars,
         tube_radius=0.02,
         color=(0.0, 0.0, 0.0),

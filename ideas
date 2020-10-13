@@ -1,2 +1,0 @@
-1. every time space_time is modified validate that each node still contains only valid nodes
-2. each time space_time is modified validate that each node has at least one future one past one left and one right
