@@ -103,7 +103,7 @@ class space_time(object):
         return past
 
     def move(self, x, t):
-        value = self.data[t][x][0]
+        value, field = self.data[t][x]
         t2 = int((t + (value - 0.5) * 2)) % self.time_size
 
         future = self.get_future((x, t))
@@ -112,8 +112,8 @@ class space_time(object):
 
         newt2 = random.choices(past)[0]
 
-        self.data[t].insert(newt1, [value, 0])
-        self.data[t2].insert(newt2, [(value + 1) % 2, 0])
+        self.data[t].insert(newt1, [value, random.random()])
+        self.data[t2].insert(newt2, [(value + 1) % 2, random.random()])
 
         self.spatial_slice_sizes[t] += 1
         self.spatial_slice_sizes[t2] += 1
