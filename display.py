@@ -220,27 +220,23 @@ def force_layout(st):
     for i in range(1000):
         print(i)
         new_map = {}
-        tmp_velocities = {}
-        dt = 0.1 / ((1.0 + i))
         for t, slice in enumerate(st.data):
             for x, direction in enumerate(slice):
                 xi = map[(x, t)][0]
                 xr = map[((x + 1) % len(slice), t)][0]
                 xl = map[((x - 1) % len(slice), t)][0]
                 xt = map[st.connected_to(x, t)][0]
-                Fl = 10.0 / (xl - xi)
-                Fr = 10.0 / (xr - xi)
-                # print(Fl + Fr)
-                Ft = -(xt - xi)
-                tmp_velocities[(x, t)] = (Fl + Fr + 0.1 * Ft) * dt
-                xf = xi + velocities[(x, t)] * dt + 0.5 * tmp_velocities[(x, t)] * dt
-                print("blip")
-                if xf < xl:
-                    print("Left Fail")
-                if xf > xr:
-                    print("Right Fail")
-                new_map[(x, t)] = (xf, t)
-        velocities = tmp_velocities
+                xt_clamped = max(min(xt, xr), xl)
+
+                new_map[(x, t)] = (
+                    xi
+                    + 0.25 * (xt_clamped - xi)
+                    + 0.25 * ((xl + xr) * 0.5 - xi) / max((xt_clamped - xi), 1),
+                    t,
+                )
+                if x == len(slice) - 1 or x == 0:
+                    new_map[(x, t)] = (x, t)
+                # new_map[(x, t)] = (x, t)
         map = new_map
 
     lines = []
