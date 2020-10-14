@@ -209,17 +209,21 @@ def disp_2d_vert(st):
 def force_layout(st):
     map = {}
     velocities = {}
-    X = []
-    T = []
+    Xup = []
+    Tup = []
+    Cup = []
+    Xdown = []
+    Tdown = []
+    Cdown = []
     colors = []
     for t, slice in enumerate(st.data):
         for x, direction in enumerate(slice):
-            colors.append(direction[1] * 100)
+            colors.append(direction[1])
             map[(x, t)] = (x - len(slice) * 0.5, t)
             velocities[(x, t)] = 0
 
     # one step
-    for i in range(500):
+    for i in range(50):
         print(i)
         new_map = {}
         for t, slice in enumerate(st.data):
@@ -258,16 +262,24 @@ def force_layout(st):
             if xright == 0 and x == st.spatial_slice_sizes[t] - 1:
                 xright = st.spatial_slice_sizes[t]
             # lines.append([new_map[(x, t)], (xright, t)])
-            X.append(xi)
-            T.append(ti)
+            if direction[0] == 1:
+                Xup.append(xi)
+                Tup.append(ti)
+                Cup.append(direction[1])
+            if direction[0] == 0:
+                Xdown.append(xi)
+                Tdown.append(ti)
+                Cdown.append(direction[1])
     lc = mc.LineCollection(
-        lines, linewidths=1, cmap=plt.cm.gist_ncar, alpha=0.5, linestyle="solid"
+        lines, linewidths=1, alpha=0.5, linestyle="solid", color="black"
     )
     import numpy as np
 
-    lc.set_array(np.array(colors))
+    # lc.set_array(np.array(colors))
     fig, ax = pl.subplots()
     ax.add_collection(lc)
+    ax.set_aspect(1)
     ax.autoscale_view()
-    # plt.scatter(X, T, alpha=0.0)
+    plt.scatter(Xup, Tup, alpha=0.5, c=Cup, marker="v", cmap="Reds")
+    plt.scatter(Xdown, Tdown, alpha=0.5, c=Cdown, marker="^", cmap="Blues")
     plt.show()
