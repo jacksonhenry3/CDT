@@ -211,17 +211,20 @@ def force_layout(st):
     velocities = {}
     X = []
     T = []
+    colors = []
     for t, slice in enumerate(st.data):
         for x, direction in enumerate(slice):
-            map[(x, t)] = (x, t)
+            colors.append(direction[1] * 100)
+            map[(x, t)] = (x - len(slice) * 0.5, t)
             velocities[(x, t)] = 0
 
     # one step
-    for i in range(1000):
+    for i in range(500):
         print(i)
         new_map = {}
         for t, slice in enumerate(st.data):
             for x, direction in enumerate(slice):
+
                 xi = map[(x, t)][0]
                 xr = map[((x + 1) % len(slice), t)][0]
                 xl = map[((x - 1) % len(slice), t)][0]
@@ -234,8 +237,10 @@ def force_layout(st):
                     + 0.25 * ((xl + xr) * 0.5 - xi) / max((xt_clamped - xi), 1),
                     t,
                 )
-                if x == len(slice) - 1 or x == 0:
-                    new_map[(x, t)] = (x, t)
+                if x == len(slice) - 1:
+                    new_map[(x, t)] = (xi + (xt - xi) * 0.25, t)
+                if x == 0:
+                    new_map[(x, t)] = (xi + (xt - xi) * 0.25, t)
                 # new_map[(x, t)] = (x, t)
         map = new_map
 
@@ -252,13 +257,17 @@ def force_layout(st):
             xright, tright = new_map[((x + 1) % st.spatial_slice_sizes[t], t)]
             if xright == 0 and x == st.spatial_slice_sizes[t] - 1:
                 xright = st.spatial_slice_sizes[t]
-            lines.append([new_map[(x, t)], (xright, t)])
+            # lines.append([new_map[(x, t)], (xright, t)])
             X.append(xi)
             T.append(ti)
     lc = mc.LineCollection(
-        lines, linewidths=1, color="black", alpha=0.5, linestyle="solid"
+        lines, linewidths=1, cmap=plt.cm.gist_ncar, alpha=0.5, linestyle="solid"
     )
+    import numpy as np
+
+    lc.set_array(np.array(colors))
     fig, ax = pl.subplots()
     ax.add_collection(lc)
-    plt.scatter(X, T)
+    ax.autoscale_view()
+    # plt.scatter(X, T, alpha=0.0)
     plt.show()

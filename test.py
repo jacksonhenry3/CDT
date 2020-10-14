@@ -10,8 +10,8 @@ from space_time import space_time
 # plt.show()
 #
 # #
-st = space_time(64, 64)
+st = space_time(128, 128)
 # st.move(10, 10)
-simulation.run(st, 10 ** 4, 0.525, display=True)
+simulation.run(st, 10 ** 6, 0.525, display=True)
 # st.save("Success")
 display.force_layout(st)
