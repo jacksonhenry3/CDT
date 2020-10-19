@@ -249,7 +249,10 @@ def force_layout(st):
         map = new_map
 
     lines = []
+    tot_def = 0
+    fig, ax = pl.subplots()
     for t, slice in enumerate(st.data):
+        print(t)
         for x, direction in enumerate(slice):
             if direction[0] == 1:
                 x2, t2 = st.connected_to(x, t)
@@ -261,7 +264,7 @@ def force_layout(st):
             xright, tright = new_map[((x + 1) % st.spatial_slice_sizes[t], t)]
             if xright == 0 and x == st.spatial_slice_sizes[t] - 1:
                 xright = st.spatial_slice_sizes[t]
-            # lines.append([new_map[(x, t)], (xright, t)])
+            lines.append([new_map[(x, t)], (xright, t)])
             if direction[0] == 1:
                 Xup.append(xi)
                 Tup.append(ti)
@@ -270,16 +273,30 @@ def force_layout(st):
                 Xdown.append(xi)
                 Tdown.append(ti)
                 Cdown.append(direction[1])
+            d_a = st.deficite_angle(x, t)
+
+            # if t == 10:
+            #     ax.annotate(round(d_a, 2), (xi, ti), color="red")
+            # else:
+            #     ax.annotate(round(d_a, 2), (xi, ti))
+            # ax.annotate(round(st.time_derivative(x, t), 2), (xi + 0.15, ti))
+            # ax.annotate(round(direction[1], 2), (xi - 0.15, ti))
+            # tot_def += d_a
+
+    print()
+    print(tot_def)
+    print()
     lc = mc.LineCollection(
         lines, linewidths=1, alpha=0.5, linestyle="solid", color="black"
     )
     import numpy as np
 
     # lc.set_array(np.array(colors))
-    fig, ax = pl.subplots()
+
     ax.add_collection(lc)
     ax.set_aspect(1)
     ax.autoscale_view()
-    plt.scatter(Xup, Tup, alpha=0.5, c=Cup, marker="v", cmap="Reds")
-    plt.scatter(Xdown, Tdown, alpha=0.5, c=Cdown, marker="^", cmap="Blues")
+    # plt.scatter(Xup, Tup, alpha=0.5, c=Cup, marker="v", cmap="Reds")
+    # plt.scatter(Xdown, Tdown, alpha=0.5, c=Cdown, marker="^", cmap="Blues")
+
     plt.show()

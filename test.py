@@ -2,6 +2,10 @@
 import simulation
 import display
 from space_time import space_time
+import random
+
+
+random.seed(2)
 
 # sz = simulation.multi_run([0.525 for i in range(10)], num_samples=10, num_iter=10 ** 6)
 
@@ -10,8 +14,9 @@ from space_time import space_time
 # plt.show()
 #
 # #
-st = space_time(64, 64)
-# st.move(10, 10)
-simulation.run(st, 10 ** 6, 0.525, display=True)
+st = space_time(32, 32)
+st.move(10, 10)
+simulation.run(st, 10 ** 5, 0.525, display=True)
 # st.save("Success")
 display.force_layout(st)
+# 872.664

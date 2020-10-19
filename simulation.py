@@ -3,7 +3,6 @@ import random
 from math import e
 from space_time import space_time
 
-random.seed(1)
 # def run(st, iter, lp=0.529):.525
 
 

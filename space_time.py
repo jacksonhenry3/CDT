@@ -1,7 +1,5 @@
 import random
 
-random.seed(1)
-
 
 class space_time(object):
     """
@@ -33,6 +31,62 @@ class space_time(object):
         self.spatial_slice_sizes = [len(slice) for slice in self.data]
         self.length = sum(self.spatial_slice_sizes)
         self.totalChanges = 0
+
+        self.s = 0
+
+        # for t, row in enumerate(self.data):
+        #     for x, simplex in enumerate(row):
+        #         direction = simplex[0]
+        #         field = simplex[1]
+
+    def deficite_angle(self, x, t):
+        num_future_connections = len(self.get_future([x, t]))
+        num_past_connections = len(self.get_past([x, t]))
+        f1 = 2 + num_future_connections + num_past_connections
+        f1 = (f1 - 6.0) / f1
+        row = self.data[t]
+        dir = row[x][0]
+        found_left = False
+        found_time = False
+        dir = self.data[t][(x - 1) % self.spatial_slice_sizes[t]][0]
+        x2 = x - 1
+
+        while not found_left or not found_time:
+            if row[x2][0] == dir and not found_left:
+                found_left = True
+                xl = x2
+            if row[x2][0] != dir and not found_time:
+                found_time = True
+                xt = x2
+            x2 = x2 - 1
+        num_future_connections = len(self.get_future([xl, t]))
+        num_past_connections = len(self.get_past([xl, t]))
+        f2 = 2 + num_future_connections + num_past_connections
+        f2 = (f2 - 6.0) / f2
+
+        num_future_connections = len(self.get_future([xt, t]))
+        num_past_connections = len(self.get_past([xt, t]))
+        f3 = 2 + num_future_connections + num_past_connections
+        f3 = (f3 - 6.0) / f3
+
+        return (f1 + f2 + f3) / 3.0
+
+    def space_derivative(self, x, t, l=1):
+        row = self.data[t]
+        width = len(row)
+        print((x + 1) % width)
+        return (row[(x + 1) % width][1] - row[(x - 1) % width][1]) / (2 * l)
+
+    def time_derivative(self, x, t, l=1):
+        simplex = self.data[t][x]
+        x2, t2 = self.connected_to(x, t)
+
+        if simplex[0] == 1:
+            return (simplex[1] - self.data[t2][x2][1]) / l
+        elif simplex[0] == 0:
+            return (self.data[t2][x2][1] - simplex[1]) / l
+        else:
+            print("WHAT!")
 
     def connected_to(self, x, t, disp=False):
         slice = self.data[t]
