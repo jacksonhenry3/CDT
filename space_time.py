@@ -17,7 +17,10 @@ class space_time(object):
 
         if data is None:
             self.data = [
-                [[(i + j) % 2, random.random()] for i in range(space_size)]
+                [
+                    {"dir": (i + j) % 2, "phi": random.random(), "R": 0}
+                    for i in range(space_size)
+                ]
                 for j in range(time_size)
             ]
         else:
@@ -32,30 +35,30 @@ class space_time(object):
         self.length = sum(self.spatial_slice_sizes)
         self.totalChanges = 0
 
-        self.s = 0
+        self.s = self.action()
 
         # for t, row in enumerate(self.data):
         #     for x, simplex in enumerate(row):
         #         direction = simplex[0]
         #         field = simplex[1]
 
-    def deficite_angle(self, x, t):
+    def curvature(self, x, t):
         num_future_connections = len(self.get_future([x, t]))
         num_past_connections = len(self.get_past([x, t]))
         f1 = 2 + num_future_connections + num_past_connections
         f1 = (f1 - 6.0) / f1
         row = self.data[t]
-        dir = row[x][0]
+        dir = row[x]["dir"]
         found_left = False
         found_time = False
-        dir = self.data[t][(x - 1) % self.spatial_slice_sizes[t]][0]
+        dir = self.data[t][(x - 1) % self.spatial_slice_sizes[t]]["dir"]
         x2 = x - 1
 
         while not found_left or not found_time:
-            if row[x2][0] == dir and not found_left:
+            if row[x2]["dir"] == dir and not found_left:
                 found_left = True
                 xl = x2
-            if row[x2][0] != dir and not found_time:
+            if row[x2]["dir"] != dir and not found_time:
                 found_time = True
                 xt = x2
             x2 = x2 - 1
@@ -69,32 +72,46 @@ class space_time(object):
         f3 = 2 + num_future_connections + num_past_connections
         f3 = (f3 - 6.0) / f3
 
-        return (f1 + f2 + f3) / 3.0
+        return (f1 + f2 + f3) * 2.0 / 3.0
 
     def space_derivative(self, x, t, l=1):
         row = self.data[t]
-        width = len(row)
-        print((x + 1) % width)
-        return (row[(x + 1) % width][1] - row[(x - 1) % width][1]) / (2 * l)
+        width = self.spatial_slice_sizes[t]
+        return (row[(x + 1) % width]["phi"] - row[(x - 1) % width]["phi"]) / (2 * l)
 
     def time_derivative(self, x, t, l=1):
         simplex = self.data[t][x]
         x2, t2 = self.connected_to(x, t)
 
-        if simplex[0] == 1:
-            return (simplex[1] - self.data[t2][x2][1]) / l
-        elif simplex[0] == 0:
-            return (self.data[t2][x2][1] - simplex[1]) / l
+        if simplex["dir"] == 1:
+            return (simplex["phi"] - self.data[t2][x2]["phi"]) / l
+        elif simplex["dir"] == 0:
+            return (self.data[t2][x2]["phi"] - simplex["phi"]) / l
         else:
             print("WHAT!")
 
+    def action(self):
+        area = 1
+        s = 0
+        for t, row in enumerate(self.data):
+            for x, simplex in enumerate(row):
+                phi = simplex["phi"]
+                R = self.curvature(x, t)
+                s_delta = 0
+                s_delta += phi * R
+                s_delta -= (
+                    self.space_derivative(x, t) ** 2 + self.time_derivative(x, t) ** 2
+                )
+                s += s_delta
+        return area * s
+
     def connected_to(self, x, t, disp=False):
         slice = self.data[t]
-        direction = slice[x][0]
+        direction = slice[x]["dir"]
 
         idx = 0
         for prev_dir in slice[:x]:
-            if prev_dir[0] == direction:
+            if prev_dir["dir"] == direction:
                 idx += 1
 
         # connect it to the the !"direction" pointing triangle
@@ -104,7 +121,7 @@ class space_time(object):
         # x3 = 0
 
         for i, prev_dir in enumerate(self.data[t2]):
-            if prev_dir[0] != direction:
+            if prev_dir["dir"] != direction:
 
                 if count == idx:
                     x3p = i
@@ -132,42 +149,112 @@ class space_time(object):
         # MUST BE VERY CAREFUL ABOUT OFF BY ONE
         x, t = node
         slice = self.data[t]
-        value = slice[x][0]
+        value = slice[x]["dir"]
         xp = (x + 1) % self.spatial_slice_sizes[t]
 
-        future = [xp]
-        while slice[xp][0] != value:
+        future = [(xp, t)]
+        while slice[xp]["dir"] != value:
 
             xp = (xp + 1) % self.spatial_slice_sizes[t]
-            future.append(xp)
+            future.append((xp, t))
         return future
 
     def get_past(self, node):
-        # MUST BE VERY CAREGUL ABOUT OFF BY ONE
+        # MUST BE VERY CAREFUL ABOUT OFF BY ONE
         x, t = node
         x2, t2 = self.connected_to(x, t)
         slice2 = self.data[t2]
-        value2 = slice2[x2][0]
+        value2 = slice2[x2]["dir"]
         xp2 = (x2 + 1) % self.spatial_slice_sizes[t2]
 
-        past = [xp2]
-        while slice2[xp2][0] != value2:
+        past = [(xp2, t2)]
+        while slice2[xp2]["dir"] != value2:
             xp2 = (xp2 + 1) % self.spatial_slice_sizes[t2]
-            past.append(xp2)
+            past.append((xp2, t2))
         return past
 
+    def get_all(self, node):
+        nodes = self.get_future(node)
+        nodes += self.get_past(node)
+        nodes.append(node)
+        nodes.append(self.connected_to(*node))
+        return nodes
+
+    def get_possible_modified(self, node0, node1, dir1, node2, dir2):
+        """node0 is the move location, node1 and node2 are the location of triangle insertion"""
+        nodes = self.get_all(node0)
+
+        t = node1[1]
+        print(t)
+        x = node1[0]
+        slice = self.data[t]
+        width = self.spatial_slice_sizes[t]
+
+        xp = (x - 1) % width
+        new_direction = slice[xp]["dir"]
+        while new_direction is dir1:
+            xp = (xp - 1) % width
+            new_direction = slice[xp]["dir"]
+        nodes += self.get_all((xp, t))
+
+        t = node2[1]
+        x = node2[0]
+        slice = self.data[t]
+        width = self.spatial_slice_sizes[t]
+
+        xp = (x - 1) % width
+        new_direction = slice[xp]["dir"]
+        while new_direction is dir2:
+            xp = (xp - 1) % width
+            new_direction = slice[xp]["dir"]
+        nodes += self.get_all((xp, t))
+
+        return nodes
+
     def move(self, x, t):
-        value, field = self.data[t][x]
-        t2 = int((t + (value - 0.5) * 2)) % self.time_size
+        simplex = self.data[t][x]
+        dir = simplex["dir"]
+        t2 = int((t + (dir - 0.5) * 2)) % self.time_size
 
         future = self.get_future((x, t))
         past = self.get_past((x, t))
         newt1 = random.choices(future)[0]
-
         newt2 = random.choices(past)[0]
 
-        self.data[t].insert(newt1, [value, random.random()])
-        self.data[t2].insert(newt2, [(value + 1) % 2, random.random()])
+        pschng = self.get_possible_modified((x, t), newt1, dir, newt2, (dir + 1) % 2)
+        for n in pschng:
+            self.data[n[1]][n[0]]["R"] = 10
+        newt1 = newt1[0]
+
+        newt2 = newt2[0]
+        # print(newt2)
+
+        # pnodes = self.get_past((x, t))
+        # past = self.data[(t - 1) % self.time_size]
+        # for n in pnodes:
+        #     past[n][2] = 2
+        #
+        # fnodes = self.get_future((x, t))
+        # fute = self.data[(t + 1) % self.time_size]
+        # for n in fnodes:
+        #     fute[n][2] = 3
+        #
+        # xc, tc = self.connected_to(x, t)
+        #
+        # cpnodes = self.get_past((xc, tc))
+        # cpast = self.data[(tc - 1) % self.time_size]
+        # for n in cpnodes:
+        #     cpast[n][2] = 4
+        #
+        # cfnodes = self.get_future((xc, tc))
+        # cfast = self.data[(tc + 1) % self.time_size]
+        # for n in cfnodes:
+        #     cfast[n][2] = 5
+
+        self.data[t].insert(newt1, {"dir": dir, "phi": random.random(), "R": 1})
+        self.data[t2].insert(
+            newt2, {"dir": (dir + 1) % 2, "phi": random.random(), "R": 1}
+        )
 
         self.spatial_slice_sizes[t] += 1
         self.spatial_slice_sizes[t2] += 1

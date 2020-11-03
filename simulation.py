@@ -2,6 +2,7 @@ import sys  # required for saving state
 import random
 from math import e
 from space_time import space_time
+import copy
 
 # def run(st, iter, lp=0.529):.525
 
@@ -30,6 +31,7 @@ def run(st, iter, lp, display=False):
             r2 = random.random()
             future = st.get_future(vert)
             past = st.get_past(vert)
+            # Probability of a move with NO dilaton
             pm = (
                 st.length
                 / 2
@@ -40,15 +42,25 @@ def run(st, iter, lp, display=False):
                 * e ** (-lp)
             )
             pim = 1 / (len(future) + len(past)) * e ** (lp)
+
+            # duplicate = copy.deepcopy(st)
+            # duplicate.move(*vert)
+            # sp = duplicate.action()
+            # if sp != st.action():
+            #     print("fudge")
             move = pm > r1
             imove = pim > r2
-
+            # print()
             if move and imove:
                 pass
             elif move:
+                # so = st.action()
                 st.move(*vert)
+                # print(st.action() - so)
             elif imove:
+                # so = st.action()
                 st.inverse_move(*vert)
+                # print(st.action() - so)
         except:
 
             # print("error!")

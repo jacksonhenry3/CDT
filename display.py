@@ -21,7 +21,7 @@ def disp_2d(st):
                     # print(st.connected_to(x, t)[0] - x)
 
             bias = bias / cnt
-            print((bias, t))
+            # print((bias, t))
             for x, direction in enumerate(slice):
                 map[(x, t)] = (x + bias, t)
 
@@ -216,15 +216,17 @@ def force_layout(st):
     Tdown = []
     Cdown = []
     colors = []
+    C1 = []
+    C2 = []
     for t, slice in enumerate(st.data):
         for x, direction in enumerate(slice):
-            colors.append(direction[1])
+            colors.append(direction["dir"])
             map[(x, t)] = (x - len(slice) * 0.5, t)
             velocities[(x, t)] = 0
 
     # one step
     for i in range(50):
-        print(i)
+        # print(i)
         new_map = {}
         for t, slice in enumerate(st.data):
             for x, direction in enumerate(slice):
@@ -250,11 +252,11 @@ def force_layout(st):
 
     lines = []
     tot_def = 0
-    fig, ax = pl.subplots()
+    fig, (ax, ax2) = pl.subplots(1, 2)
     for t, slice in enumerate(st.data):
-        print(t)
+        # print(t)
         for x, direction in enumerate(slice):
-            if direction[0] == 1:
+            if direction["dir"] == 1:
                 x2, t2 = st.connected_to(x, t)
                 x2, t2 = new_map[(x2, t2)]
                 if t2 == 0 and t == st.time_size - 1:
@@ -265,15 +267,21 @@ def force_layout(st):
             if xright == 0 and x == st.spatial_slice_sizes[t] - 1:
                 xright = st.spatial_slice_sizes[t]
             lines.append([new_map[(x, t)], (xright, t)])
-            if direction[0] == 1:
+            if direction["dir"] == 1:
                 Xup.append(xi)
                 Tup.append(ti)
-                Cup.append(direction[1])
-            if direction[0] == 0:
+                # Cup.append(direction[1])
+                Cup.append(st.curvature(x, t))
+                C1.append(direction["R"])
+            if direction["dir"] == 0:
                 Xdown.append(xi)
                 Tdown.append(ti)
-                Cdown.append(direction[1])
-            d_a = st.deficite_angle(x, t)
+                # Cdown.append(direction[1])
+                Cdown.append(st.curvature(x, t))
+
+                C2.append(direction["R"])
+
+            d_a = st.curvature(x, t)
 
             # if t == 10:
             #     ax.annotate(round(d_a, 2), (xi, ti), color="red")
@@ -283,10 +291,13 @@ def force_layout(st):
             # ax.annotate(round(direction[1], 2), (xi - 0.15, ti))
             # tot_def += d_a
 
-    print()
-    print(tot_def)
-    print()
+    # print()
+    # print(tot_def)
+    # print()
     lc = mc.LineCollection(
+        lines, linewidths=1, alpha=0.5, linestyle="solid", color="black"
+    )
+    lc2 = mc.LineCollection(
         lines, linewidths=1, alpha=0.5, linestyle="solid", color="black"
     )
     import numpy as np
@@ -296,7 +307,14 @@ def force_layout(st):
     ax.add_collection(lc)
     ax.set_aspect(1)
     ax.autoscale_view()
-    # plt.scatter(Xup, Tup, alpha=0.5, c=Cup, marker="v", cmap="Reds")
-    # plt.scatter(Xdown, Tdown, alpha=0.5, c=Cdown, marker="^", cmap="Blues")
+    ax.scatter(Xup, Tup, alpha=1, c=Cup, marker="v", s=100)  # , cmap="Reds")
+    ax.scatter(Xdown, Tdown, alpha=1, c=Cdown, marker="^", s=100)  # , cmap="Blues")
+    ax.axis("off")
 
+    ax2.add_collection(lc2)
+    ax2.set_aspect(1)
+    ax2.autoscale_view()
+    ax2.scatter(Xup, Tup, alpha=1, c=C1, marker="v", s=100)  # , cmap="Reds")
+    ax2.scatter(Xdown, Tdown, alpha=1, c=C2, marker="^", s=100)  # , cmap="Blues")
+    ax2.axis("off")
     plt.show()
