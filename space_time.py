@@ -180,12 +180,11 @@ class space_time(object):
         nodes.append(self.connected_to(*node))
         return nodes
 
-    def get_possible_modified(self, node0, node1, dir1, node2, dir2):
+    def get_possible_modified_move(self, node0, node1, dir1, node2, dir2):
         """node0 is the move location, node1 and node2 are the location of triangle insertion"""
         nodes = self.get_all(node0)
 
         t = node1[1]
-        print(t)
         x = node1[0]
         slice = self.data[t]
         width = self.spatial_slice_sizes[t]
@@ -211,6 +210,40 @@ class space_time(object):
 
         return nodes
 
+    def get_possible_modified_imove(self, node0):
+        """node0 is the move location, node1 and node2 are the location of triangle insertion"""
+        nodes = self.get_all(node0)
+        x = node0[0]
+        t = node0[1]
+        width = self.spatial_slice_sizes[t]
+        xp = (x - 1) % width
+        slice = self.data[t]
+        new_direction = slice[xp]["dir"]
+        dir1 = self.data[t][x]["dir"]
+        while new_direction is not dir1:
+            xp = (xp - 1) % width
+            new_direction = slice[xp]["dir"]
+        nodes += self.get_all((xp, t))
+
+        xp = (x - 1) % width
+        new_direction = slice[xp]["dir"]
+        while new_direction is dir1:
+            xp = (xp - 1) % width
+            new_direction = slice[xp]["dir"]
+        nodes += self.get_all((xp, t))
+
+        xp, tp = self.connected_to(x, t)
+        slice = self.data[tp]
+        width = self.spatial_slice_sizes[tp]
+        xpp = (xp - 1) % width
+        new_direction = slice[xpp]["dir"]
+        while new_direction is not dir1:
+            xpp = (xpp - 1) % width
+            new_direction = slice[xpp]["dir"]
+        nodes += self.get_all((xpp, tp))
+
+        return nodes
+
     def move(self, x, t):
         simplex = self.data[t][x]
         dir = simplex["dir"]
@@ -221,39 +254,18 @@ class space_time(object):
         newt1 = random.choices(future)[0]
         newt2 = random.choices(past)[0]
 
-        pschng = self.get_possible_modified((x, t), newt1, dir, newt2, (dir + 1) % 2)
+        pschng = self.get_possible_modified_move(
+            (x, t), newt1, dir, newt2, (dir + 1) % 2
+        )
         for n in pschng:
-            self.data[n[1]][n[0]]["R"] = 10
+            self.data[n[1]][n[0]]["R"] += 1
         newt1 = newt1[0]
 
         newt2 = newt2[0]
-        # print(newt2)
 
-        # pnodes = self.get_past((x, t))
-        # past = self.data[(t - 1) % self.time_size]
-        # for n in pnodes:
-        #     past[n][2] = 2
-        #
-        # fnodes = self.get_future((x, t))
-        # fute = self.data[(t + 1) % self.time_size]
-        # for n in fnodes:
-        #     fute[n][2] = 3
-        #
-        # xc, tc = self.connected_to(x, t)
-        #
-        # cpnodes = self.get_past((xc, tc))
-        # cpast = self.data[(tc - 1) % self.time_size]
-        # for n in cpnodes:
-        #     cpast[n][2] = 4
-        #
-        # cfnodes = self.get_future((xc, tc))
-        # cfast = self.data[(tc + 1) % self.time_size]
-        # for n in cfnodes:
-        #     cfast[n][2] = 5
-
-        self.data[t].insert(newt1, {"dir": dir, "phi": random.random(), "R": 1})
+        self.data[t].insert(newt1, {"dir": dir, "phi": random.random(), "R": 10})
         self.data[t2].insert(
-            newt2, {"dir": (dir + 1) % 2, "phi": random.random(), "R": 1}
+            newt2, {"dir": (dir + 1) % 2, "phi": random.random(), "R": 10}
         )
 
         self.spatial_slice_sizes[t] += 1
@@ -264,8 +276,13 @@ class space_time(object):
 
     def inverse_move(self, x, t):
         row = self.data[t]
-        dir = row[x][0]
-        if dir in [item[0] for item in row[:x] + row[x + 1 :]]:
+        dir = row[x]["dir"]
+
+        pschng = self.get_possible_modified_imove((x, t))
+        for n in pschng:
+            self.data[n[1]][n[0]]["R"] -= 1
+
+        if dir in [item["dir"] for item in row[:x] + row[x + 1 :]]:
             x2, t2 = self.connected_to(x, t)
 
             # self.data[t] = np.delete(self.data[t], x)
