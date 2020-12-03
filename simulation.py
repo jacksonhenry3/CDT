@@ -1,7 +1,7 @@
 import sys  # required for saving state
 import random
 from math import e
-from space_time import space_time
+from SpaceTime import SpaceTime
 import copy
 
 # def run(st, iter, lp=0.529):.525
@@ -55,12 +55,29 @@ def run(st, iter, lp, display=False):
                 pass
             elif move:
                 # so = st.action()
+                print("M")
                 st.move(*vert)
                 # print(st.action() - so)
             elif imove:
                 # so = st.action()
+                print("IM")
                 st.inverse_move(*vert)
                 # print(st.action() - so)
+
+            #check curvature error
+            any_failure = False
+            for t,slice in enumerate(st.data):
+                for x,node in enumerate(slice):
+                    if node["R"]!= st.curvature(x,t):
+                        any_failure = True
+                        print(x,t)
+                        print(vert)
+
+
+                        print("failed on change of"+ str(vert))
+            if any_failure:
+                import display as disp
+                disp.force_layout(st)
         except:
 
             # print("error!")
@@ -89,7 +106,7 @@ def multi_run(lp, num_iter=10 ** 6, num_samples=10, initial_space_time=None):
     space_times = []
     for i in range(num_samples):
         if initial_space_time is None:
-            st = space_time(32, 64)
+            st = SpaceTime(32, 64)
         else:
             st = initial_space_time
         # print("begining Sample {}".format(i))

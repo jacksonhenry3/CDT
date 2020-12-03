@@ -1,7 +1,7 @@
 import random
 
 
-class space_time(object):
+class SpaceTime(object):
     """
     the data array holds a list of each spatial slice. Each spatial slice contain one
     value for each triangle in that slice. The value indicates weather the triangle is
@@ -13,12 +13,12 @@ class space_time(object):
         time_size must be even. Space size can be arbitrary. If you want to initialize
         a space_time with exisiting data these two params will be overwritten
         """
-        super(space_time, self).__init__()
+        super(SpaceTime, self).__init__()
 
         if data is None:
             self.data = [
                 [
-                    {"dir": (i + j) % 2, "phi": random.random(), "R": 0}
+                    {"dir": (i + j) % 2, "phi": random.random(), "R": 0.}
                     for i in range(space_size)
                 ]
                 for j in range(time_size)
@@ -31,7 +31,7 @@ class space_time(object):
 
         # these change with moves and inverse moves
         # a possible validation test would be to recalculate and compare.
-        self.spatial_slice_sizes = [len(slice) for slice in self.data]
+        self.spatial_slice_sizes = [len(spatial_slice) for spatial_slice in self.data]
         self.length = sum(self.spatial_slice_sizes)
         self.totalChanges = 0
 
@@ -43,6 +43,8 @@ class space_time(object):
         #         field = simplex[1]
 
     def curvature(self, x, t):
+        # print(x,t)
+        # print(self.spatial_slice_sizes[t])
         num_future_connections = len(self.get_future([x, t]))
         num_past_connections = len(self.get_past([x, t]))
         f1 = 2 + num_future_connections + num_past_connections
@@ -182,6 +184,7 @@ class space_time(object):
 
     def get_possible_modified_move(self, node0, node1, dir1, node2, dir2):
         """node0 is the move location, node1 and node2 are the location of triangle insertion"""
+        """ Currently this gets node locations BEFORE the move, but after is more useful"""
         nodes = self.get_all(node0)
 
         t = node1[1]
@@ -208,7 +211,7 @@ class space_time(object):
             new_direction = slice[xp]["dir"]
         nodes += self.get_all((xp, t))
 
-        return nodes
+        return set(nodes)
 
     def get_possible_modified_imove(self, node0):
         """node0 is the move location, node1 and node2 are the location of triangle insertion"""
@@ -242,7 +245,7 @@ class space_time(object):
             new_direction = slice[xpp]["dir"]
         nodes += self.get_all((xpp, tp))
 
-        return nodes
+        return set(nodes)
 
     def move(self, x, t):
         simplex = self.data[t][x]
@@ -257,47 +260,77 @@ class space_time(object):
         pschng = self.get_possible_modified_move(
             (x, t), newt1, dir, newt2, (dir + 1) % 2
         )
-        for n in pschng:
-            self.data[n[1]][n[0]]["R"] += 1
+
         newt1 = newt1[0]
 
         newt2 = newt2[0]
 
-        self.data[t].insert(newt1, {"dir": dir, "phi": random.random(), "R": 10})
+        self.data[t].insert(newt1, {"dir": dir, "phi": random.random(), "R":0.})
         self.data[t2].insert(
-            newt2, {"dir": (dir + 1) % 2, "phi": random.random(), "R": 10}
+            newt2, {"dir": (dir + 1) % 2, "phi": random.random(), "R": 0.}
         )
+
+
 
         self.spatial_slice_sizes[t] += 1
         self.spatial_slice_sizes[t2] += 1
+        self.data[t][newt1]["R"] = self.curvature(newt1, t)
+        self.data[t2][newt2]["R"] = self.curvature(newt2, t2)
+
+        ret = []
+        for n in pschng:
+            tp = n[1]
+            xp = n[0]
+            if (tp == t and xp >= newt1) or (tp == t2 and xp>=newt2):
+                xp = (xp + 1)  # POSSIBLE SOURCE OF ERRORS NO MODULO?
+            ret.append((xp,tp))
+            self.data[tp][xp]["R"] = self.curvature(xp,tp)
 
         self.length += 2
         self.totalChanges += 1
+        return(ret)
 
     def inverse_move(self, x, t):
         row = self.data[t]
         dir = row[x]["dir"]
 
         pschng = self.get_possible_modified_imove((x, t))
-        for n in pschng:
-            self.data[n[1]][n[0]]["R"] -= 1
+
 
         if dir in [item["dir"] for item in row[:x] + row[x + 1 :]]:
             x2, t2 = self.connected_to(x, t)
 
-            # self.data[t] = np.delete(self.data[t], x)
             self.data[t].pop(x)
-            # self.data[t2] = np.delete(self.data[t2], x2)
             self.data[t2].pop(x2)
+
+
 
             self.spatial_slice_sizes[t] -= 1
             self.spatial_slice_sizes[t2] -= 1
             self.length -= 2
             self.totalChanges += 1
+
+            for n in pschng:
+
+                tp = n[1]
+                xp = n[0]
+                # print(tp)
+                # print(xp)
+                # print(t,t2)
+
+                # todo this double counts 2 triangles This will become more of an issue when calculating the action.
+                if (tp == t and xp > x) or (tp == t2 and xp > x2):
+                    xp = (xp - 1)
+                # print(xp)
+                # print(self.spatial_slice_sizes[tp])
+                # print()
+                xp = xp%self.spatial_slice_sizes[tp]
+                self.data[tp][xp]["R"] = self.curvature(xp, tp)
+
         else:
             print(row)
             print(
-                "Inverse move failed becouse (x,t)-(x2,t2) bounds both sides of a face"
+                "Inverse move failed because (x,t)-(x2,t2) bounds both sides of a face"
             )
 
     def save(self, name="test"):

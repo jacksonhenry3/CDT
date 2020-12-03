@@ -272,7 +272,7 @@ def force_layout(st):
                 Tup.append(ti)
                 # Cup.append(direction[1])
                 Cup.append(st.curvature(x, t))
-                C1.append(direction["R"])
+                C1.append(direction["R"]-st.curvature(x, t))
             if direction["dir"] == 0:
                 Xdown.append(xi)
                 Tdown.append(ti)
@@ -280,8 +280,14 @@ def force_layout(st):
                 Cdown.append(st.curvature(x, t))
 
                 C2.append(direction["R"])
-
+            # if direction["R"] != st.curvature(x, t):
+            #     print()
+            #     print(direction["R"])
+            #     print(st.curvature(x, t))
+            #     print("FAIL")
+            #     print(x, t)
             d_a = st.curvature(x, t)
+
 
             # if t == 10:
             #     ax.annotate(round(d_a, 2), (xi, ti), color="red")

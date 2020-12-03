@@ -1,7 +1,7 @@
 # from space_time import space_time
 import simulation
 import display
-from space_time import space_time
+from SpaceTime import SpaceTime
 import random
 
 
@@ -14,9 +14,10 @@ random.seed(123)
 # plt.show()
 #
 # #
-t = 1
-x = 10
-st = space_time(32, 32)
+t = 4
+x = 4
+
+st = SpaceTime(8, 8)
 # nds = st.get_all((x, t))
 # for n in nds:
 #     # print(n)
@@ -24,9 +25,24 @@ st = space_time(32, 32)
 # pass
 # st.data[t][x]["R"] = 1
 
-# st.inverse_move(x, t)
-# st.inverse_move(10, 10)
-simulation.run(st, 10 ** 6, 0.525, display=True)
+# st.move(x, t)
+for i in range(18):
+    vert = st.random_vertex()
+    st.move(*vert)
+vert = st.random_vertex()
+pschng = st.move(*vert)
+for t, slice in enumerate(st.data):
+    for x, node in enumerate(slice):
+        st.data[t][x]["R"] = 0
+
+st.data[vert[1]][vert[0]]["R"] = 150
+con = st.connected_to(*vert)
+st.data[con[1]][con[0]]["R"] = 150
+for n in pschng:
+    tp = n[1]
+    xp = n[0]
+    st.data[tp][xp]["R"] = 100
+# simulation.run(st, 2*10**2, 0.525, display=True)
 # st.save("Success")
 display.force_layout(st)
 # 872.664
