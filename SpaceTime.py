@@ -186,6 +186,7 @@ class SpaceTime(object):
         """node0 is the move location, node1 and node2 are the location of triangle insertion"""
         """ Currently this gets node locations BEFORE the move, but after is more useful"""
         nodes = self.get_all(node0)
+        # nodes = []
 
         t = node1[1]
         x = node1[0]
@@ -214,6 +215,7 @@ class SpaceTime(object):
         return set(nodes)
 
     def get_possible_modified_imove(self, node0):
+        #todo is this failing when the newly inserted edge crossed the "space boundry"?
         """node0 is the move location, node1 and node2 are the location of triangle insertion"""
         nodes = self.get_all(node0)
         x = node0[0]
@@ -248,6 +250,9 @@ class SpaceTime(object):
         return set(nodes)
 
     def move(self, x, t):
+        #TODO make it so a move doesnt randomly select the insertion points but instead takes them as arguments.
+        #todo a move should return the location of the newly inserted node (simplex)
+        #TODO There is an error here, becouse insertion is always LEFT? of the chosen index nodes which should be connected can be inserted accross the st boundry
         simplex = self.data[t][x]
         dir = simplex["dir"]
         t2 = int((t + (dir - 0.5) * 2)) % self.time_size
@@ -262,8 +267,13 @@ class SpaceTime(object):
         )
 
         newt1 = newt1[0]
-
+        if newt1 == 0:
+            newt1 = self.spatial_slice_sizes[t]
         newt2 = newt2[0]
+        if newt2==0:
+            newt2 = self.spatial_slice_sizes[t2]
+
+
 
         self.data[t].insert(newt1, {"dir": dir, "phi": random.random(), "R":0.})
         self.data[t2].insert(
@@ -282,12 +292,22 @@ class SpaceTime(object):
             tp = n[1]
             xp = n[0]
             if (tp == t and xp >= newt1) or (tp == t2 and xp>=newt2):
-                xp = (xp + 1)  # POSSIBLE SOURCE OF ERRORS NO MODULO?
+                xp = (xp + 1)%self.spatial_slice_sizes[tp]  # POSSIBLE SOURCE OF ERRORS NO MODULO?
             ret.append((xp,tp))
             self.data[tp][xp]["R"] = self.curvature(xp,tp)
 
         self.length += 2
         self.totalChanges += 1
+        test = True
+        for T, slice in enumerate(self.data):
+            for X, node in enumerate(slice):
+                if self.data[T][X]["R"]!= self.curvature(X,T):
+                    test = False
+                    print(X,T)
+        if not test:
+            print("failed on inserting ")
+            print((newt1,t),(newt2,t2))
+
         return(ret)
 
     def inverse_move(self, x, t):

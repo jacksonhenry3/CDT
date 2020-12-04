@@ -270,23 +270,24 @@ def force_layout(st):
             if direction["dir"] == 1:
                 Xup.append(xi)
                 Tup.append(ti)
-                # Cup.append(direction[1])
-                Cup.append(st.curvature(x, t))
-                C1.append(direction["R"]-st.curvature(x, t))
+
+                Cup.append(st.curvature(x, t)-direction["R"])
+                C1.append(direction["R"])
+
             if direction["dir"] == 0:
                 Xdown.append(xi)
                 Tdown.append(ti)
-                # Cdown.append(direction[1])
-                Cdown.append(st.curvature(x, t))
 
+                Cdown.append(st.curvature(x, t)-direction["R"])
                 C2.append(direction["R"])
+
             # if direction["R"] != st.curvature(x, t):
             #     print()
             #     print(direction["R"])
             #     print(st.curvature(x, t))
             #     print("FAIL")
             #     print(x, t)
-            d_a = st.curvature(x, t)
+            # d_a = st.curvature(x, t)
 
 
             # if t == 10:
@@ -313,14 +314,20 @@ def force_layout(st):
     ax.add_collection(lc)
     ax.set_aspect(1)
     ax.autoscale_view()
-    ax.scatter(Xup, Tup, alpha=1, c=Cup, marker="v", s=100)  # , cmap="Reds")
-    ax.scatter(Xdown, Tdown, alpha=1, c=Cdown, marker="^", s=100)  # , cmap="Blues")
+    p1 = ax.scatter(Xup, Tup, alpha=1, c=Cup, marker="v", s=100)  # , cmap="Reds")
+    p2 = ax.scatter(Xdown, Tdown, alpha=1, c=Cdown, marker="^", s=100)  # , cmap="Blues")
     ax.axis("off")
 
     ax2.add_collection(lc2)
     ax2.set_aspect(1)
     ax2.autoscale_view()
-    ax2.scatter(Xup, Tup, alpha=1, c=C1, marker="v", s=100)  # , cmap="Reds")
-    ax2.scatter(Xdown, Tdown, alpha=1, c=C2, marker="^", s=100)  # , cmap="Blues")
+    p3 = ax2.scatter(Xup, Tup, alpha=1, c=C1, marker="v", s=100)  # , cmap="Reds")
+    p4 = ax2.scatter(Xdown, Tdown, alpha=1, c=C2, marker="^", s=100)  # , cmap="Blues")
     ax2.axis("off")
+    ma = 10
+    mi = 0
+    # p1.set_clim(vmin=mi, vmax=ma)
+    # p2.set_clim(vmin=mi, vmax=ma)
+    # p3.set_clim(vmin=mi, vmax=ma)
+    # p4.set_clim(vmin=mi, vmax=ma)
     plt.show()
