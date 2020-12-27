@@ -267,11 +267,17 @@ class SpaceTime(object):
         )
 
         newt1 = newt1[0]
-        if newt1 == 0:
-            newt1 = self.spatial_slice_sizes[t]
         newt2 = newt2[0]
-        if newt2==0:
-            newt2 = self.spatial_slice_sizes[t2]
+
+        if dir== t%2:
+            if newt1 == 0:
+                print("BLIP1")
+                newt1 = self.spatial_slice_sizes[t]
+
+            if newt2==0:
+                print("BLIP2")
+                newt2 = self.spatial_slice_sizes[t2]
+
 
 
 
@@ -303,10 +309,11 @@ class SpaceTime(object):
             for X, node in enumerate(slice):
                 if self.data[T][X]["R"]!= self.curvature(X,T):
                     test = False
-                    print(X,T)
+                    # print(X,T)
         if not test:
             print("failed on inserting ")
             print((newt1,t),(newt2,t2))
+            print(self.spatial_slice_sizes)
 
         return(ret)
 
