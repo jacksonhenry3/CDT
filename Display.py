@@ -53,14 +53,14 @@ def show_node_adjacency_matrix(st):
 
     # Loop through each simplex
     for i in st.nodes:
-        connections = st.node_x[i]  # Get both spatial connections
+        connections = st.node_x(i)  # Get both spatial connections
         for c in connections:
             row.append(i)  # add vertex i to rows
             col.append(c)  # add vertex c to cols
             data.append(1)  # The values of the connection between c and i
 
         # repeat the process for the time like connection
-        connections = st.node_t[i]
+        connections = st.node_t(i)
         for c in connections:
             row.append(i)  # add vertex i to rows
             col.append(c)  # add vertex c to cols
