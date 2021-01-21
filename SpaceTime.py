@@ -185,34 +185,79 @@ class SpaceTime(object):
 
         sub_space = self.pop(node)
 
-        # self.max_node += 1
-        # new_node = self.max_node
-        #
-        # sub_space.nodes.append(new_node)
-        #
-        # # Im labeling these as left and right but actual orientation is unknown. Could this possible cause a bias? Need to pick one OR make sure it's properly random.
-        # left = sub_space.node_x(node).pop()
-        # right = sub_space.node_x(node).pop()
-        #
-        # # This fixes all the spatial relations of the new node
-        # sub_space.node_x(node).append(new_node)
-        # sub_space.node_x(node).append(right)
-        # sub_space.node_x(left).remove(node)
-        # sub_space.node_x(left).append(new_node)
-        # sub_space.node_x(new_node).append(node)
-        # sub_space.node_x(new_node).append(left)
+        self.max_node += 1
+        new_node = self.max_node
+        print(new_node)
 
-        # to fix the time connections i need an ordering of the past and future nodes. One option is to find an edge (I.E. one whos spatial connections aren't both in the sub_space) and treat graph distance from that node as a rank. This should give a spatial ordering.
+        new_node_obj = node_object(sub_space, new_node)
+        node_obj = node_object(sub_space, node)
+        left_obj = node_object(sub_space, node_obj.left)
 
-        # another (perhaps smarter) way is to start from the split point and move in one direction or the other untill leaving the set.
+        # spatial changes.
+        node_obj.set_left(new_node)
+        new_node_obj.set_right(node)
+        new_node_obj.set_left(node_obj.left)
+        left_obj.set_right(new_node)
 
-        # This is another opourtunity for orintation biases.
+        # future changes
+        new_future_set = [future]
+        f = sub_space.node_left[future]
+        while f in node_obj.future:
+            new_future_set.append(f)
+            sub_space.node_future[node].remove(f)
+            f = sub_space.node_left[f]
+        new_node_obj.set_future(new_future_set)
 
+        # past changes
+        new_past_set = [past]
+        p = sub_space.node_left[past]
+        while p in node_obj.past:
+            new_past_set.append(p)
+            sub_space.node_past[node].remove(p)
+            p = sub_space.node_left[p]
+        new_node_obj.set_past(new_past_set)
+
+        new_node_obj.set_faces([])
         self.push(sub_space)
+
+
+class node_object(object):
+    """This is just syntactic sugar to acces node relationships"""
+
+    def __init__(self, st, node_id):
+        super(node_object, self).__init__()
+        self.st = st
+        self.id = node_id
+
+        if node_id in st.nodes:
+            self.left = st.node_left[self.id]
+            self.right = st.node_right[self.id]
+            self.past = st.node_past[self.id]
+            self.future = st.node_future[self.id]
+            self.faces = st.faces_containing[self.id]
+        else:
+            st.nodes.append(self.id)
+
+    def set_left(self, val):
+        self.st.node_left[self.id] = val
+
+    def set_right(self, val):
+        self.st.node_right[self.id] = val
+
+    def set_past(self, val):
+        self.st.node_past[self.id] = val
+
+    def set_future(self, val):
+        self.st.node_future[self.id] = val
+
+    def set_faces(self, val):
+        self.st.faces_containing[self.id] = val
 
 
 FST = SpaceTime()
 FST.generate_flat(12, 12)
-# FST.move(30, 0, 0)
+# print(FST.node_left[43])
+# print(FST.node_past[30])
+FST.move(30, 42, 17)
 
-# Display.show_node_adjacency_matrix(FST)
+Display.show_node_adjacency_matrix(FST)
