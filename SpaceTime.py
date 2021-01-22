@@ -221,40 +221,65 @@ class SpaceTime(object):
 
         # face changes
         # remove old faces
+        sub_space.faces = []
 
-        old_faces = sub_space.faces.copy()
-        # new_faces = old_faces
-        # new_future_set.remove(future)
-        # new_past_set.remove(past)
-        for face in old_faces:
-            if node in face and past in face:
-                sub_space.faces.remove(face)
-            elif node in face and future in face:
-                sub_space.faces.remove(face)
-            elif node in face and left in face:
-                sub_space.faces.remove(face)
-            elif node in face and right in face:
-                sub_space.faces.remove(face)
+        n = future
+        leftmost_future = n
+        while sub_space.node_left[n] in new_node_obj.future:
+            v1 = n
+            n = sub_space.node_left[n]
+            leftmost_future = n
+            new_face = frozenset([v1, n, new_node])
+            sub_space.faces.append(new_face)
+            sub_space.face_dilaton[new_face] = -1
+        n = past
+        leftmost_past = n
+        while sub_space.node_left[n] in new_node_obj.past:
+            v1 = n
+            n = sub_space.node_left[n]
+            leftmost_past = n
+            new_face = frozenset([v1, n, new_node])
+            sub_space.faces.append(new_face)
+            sub_space.face_dilaton[new_face] = 100
 
-            # elif node in face and left in face:  # should always be true?
-            #     if any(n in face for n in new_future_set):
-            #
-            #         print("BIP")
-            #         sub_space.faces.remove(face)
-            #         new_face = frozenset([n if n != node else new_node for n in face])
-            #         sub_space.faces.append(new_face)
-            #         sub_space.face_dilaton[new_face] = 100
-            #     if any(n in face for n in new_past_set):
-            #         print("BOP")
-            #         sub_space.faces.remove(face)
-            #         new_face = frozenset([n if n != node else new_node for n in face])
-            #         sub_space.faces.append(new_face)
-            #         sub_space.face_dilaton[new_face] = -1
-        #
+        n = future
+        rightmost_future = n
+        while sub_space.node_right[n] in node_obj.future:
+            v1 = n
+            n = sub_space.node_right[n]
+            rightmost_future = n
+            new_face = frozenset([v1, n, node])
+            sub_space.faces.append(new_face)
+            sub_space.face_dilaton[new_face] = -1
+        n = past
+        rightmost_past = n
+        while sub_space.node_right[n] in node_obj.past:
+            v1 = n
+            n = sub_space.node_right[n]
+            rightmost_past = n
+            new_face = frozenset([v1, n, node])
+            sub_space.faces.append(new_face)
+            sub_space.face_dilaton[new_face] = 100
+
+        righmost_future = future
+        # while condition:
+        #     pass
+
         sub_space.faces.append(frozenset({node, new_node, future}))
         sub_space.face_dilaton[frozenset({node, new_node, future})] = 1
         sub_space.faces.append(frozenset({node, new_node, past}))
         sub_space.face_dilaton[frozenset({node, new_node, past})] = -1
+
+        sub_space.faces.append(frozenset({node, right, rightmost_future}))
+        sub_space.face_dilaton[frozenset({node, right, rightmost_future})] = 1
+        sub_space.faces.append(frozenset({node, right, rightmost_past}))
+        sub_space.face_dilaton[frozenset({node, right, rightmost_past})] = -1
+
+        sub_space.faces.append(frozenset({left, new_node, leftmost_future}))
+        sub_space.face_dilaton[frozenset({left, new_node, leftmost_future})] = 1
+        sub_space.faces.append(frozenset({left, new_node, leftmost_past}))
+        sub_space.face_dilaton[frozenset({left, new_node, leftmost_past})] = -1
+
         new_node_obj.set_faces([])
         self.push(sub_space)
 
@@ -319,7 +344,7 @@ shading = {
 FST = SpaceTime()
 size = 5
 FST.generate_flat(size, size)
-FST.move(18, 18 + size, 18 - size)
+FST.move(18, 18 + size + 1, 18 - size)
 i = 0
 for n in FST.nodes:
     i += 1
