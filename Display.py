@@ -103,7 +103,7 @@ def get_naive_coords(st):
         X[n] = x
         T[n] = t
         x += 1
-        n = st.node_right[n]
+        n = st.node_left[n]
         if n in used:
             x = 0
             t += 1
@@ -126,12 +126,17 @@ def get_smart_coords(st):
             used.append(n)
 
             past = st.node_past[n]
+            future = st.node_future[n]
             value1 = 0
             value2 = 0
             for p in past:
                 theta = theta_x[p]
                 value1 += sin(theta)
                 value2 += cos(theta)
+            # for f in future:
+            #     theta = theta_x[p]
+            #     value1 += sin(theta)
+            #     value2 += cos(theta)
             theta_x[n] = arctan2(value1, value2)
 
             n = st.node_right[n]
@@ -199,6 +204,27 @@ def plot_3d_torus(st, shading=None):
 
 def plot_3d_cyl(st, shading=None):
     # remove the ignored time triangles! This only works for spetial geometries.
+
+    if shading is None:
+        shading = {
+            "flat": True,  # Flat or smooth shading of triangles
+            "wireframe": True,
+            "wire_width": 100,
+            "wire_color": "black",  # Wireframe rendering
+            "width": 600,
+            "height": 600,  # Size of the viewer canvas
+            "antialias": True,  # Antialising, might not work on all GPUs
+            "scale": 2.0,  # Scaling of the model
+            "side": "DoubleSide",  # FrontSide, BackSide or DoubleSide rendering of the triangles
+            "colormap": "Spectral",
+            "normalize": [None, None],  # Colormap and normalization for colors
+            "background": "#222",  # Background color of the canvas
+            "line_width": 1.0,
+            "line_color": "black",  # Line properties of overlay lines
+            "bbox": False,  # Enable plotting of bounding box
+            "point_color": "red",
+            "point_size": 0.01,  # Point properties of overlay points
+        }
     theta_x, theta_t = get_smart_coords(st)
 
     import numpy as np
@@ -214,6 +240,7 @@ def plot_3d_cyl(st, shading=None):
     idx_to_node = {}
     node_to_idx = {}
     coords = {}
+    colors = []
     for n in st.nodes:
         idx_to_node[idx] = n
         node_to_idx[n] = idx
@@ -226,6 +253,9 @@ def plot_3d_cyl(st, shading=None):
             (c + 0.01 * cos(u + pi)) * sin(v),
         )
         # coords[n] = (a * cos(v), a * cos(v), u * 10)
+        if len(st.node_all_connections(n)) - 6 != 0:
+            print(len(st.node_all_connections(n)) - 6)
+        colors.append((len(st.node_all_connections(n)) - 6))
         idx += 1
     v = []
     f = []
@@ -237,14 +267,113 @@ def plot_3d_cyl(st, shading=None):
     for face in st.faces:
         col = 0
         mapped_face = []
+
         for node in face:
             n = node
             mapped_face.append(node_to_idx[node])
             col += len(st.node_all_connections(n)) - 6
-        f.append(mapped_face)
+        arbitraryN = next(iter(face))
 
-        c.append([0, st.face_dilaton[face], st.face_dilaton[face]])
+        # doesnt add triangles that span the inside of the cyl
+        if all([abs(theta_t[n] - theta_t[arbitraryN]) < pi for n in face]):
+            f.append(mapped_face)
+
     # mp.plot(np.array(v), filename="plots/test", shading={"point_size": 3})
-    mp.plot(
-        np.array(v), np.array(f), c=np.array(c), filename="plots/test", shading=shading
+    v = np.array(v)
+    f = np.array(f)
+    p = mp.plot(
+        v,
+        f,
+        c=np.array(colors),
+        filename="plots/test",
+        shading=shading,
+        return_plot=True,
+    )
+
+
+def plot_3d_cyl(st, shading=None):
+    # remove the ignored time triangles! This only works for spetial geometries.
+
+    if shading is None:
+        shading = {
+            "flat": True,  # Flat or smooth shading of triangles
+            "wireframe": True,
+            "wire_width": 0.001,
+            "wire_color": "#222",  # Wireframe rendering
+            "width": 600,
+            "height": 600,  # Size of the viewer canvas
+            "antialias": True,  # Antialising, might not work on all GPUs
+            "scale": 1.5,  # Scaling of the model
+            "side": "DoubleSide",  # FrontSide, BackSide or DoubleSide rendering of the triangles
+            "colormap": "Spectral",
+            "normalize": [None, None],  # Colormap and normalization for colors
+            "background": "#222",  # Background color of the canvas
+            "line_width": 1.0,
+            "line_color": "black",  # Line properties of overlay lines
+            "bbox": False,  # Enable plotting of bounding box
+            "point_color": "red",
+            "point_size": 0.01,  # Point properties of overlay points
+        }
+    theta_x, theta_t = get_smart_coords(st)
+
+    import numpy as np
+    from numpy import sin, cos
+    import meshplot as mp
+    import random
+
+    mp.offline()
+
+    c = 3
+    a = 1
+    idx = 0
+    idx_to_node = {}
+    node_to_idx = {}
+    coords = {}
+    colors = []
+    for n in st.nodes:
+        idx_to_node[idx] = n
+        node_to_idx[n] = idx
+        v = theta_x[n]
+        u = theta_t[n]
+
+        coords[n] = (
+            v,
+            u,
+            0,
+        )
+
+        colors.append((len(st.node_all_connections(n)) - 6))
+        idx += 1
+    v = []
+    f = []
+    c = []
+    for i in range(idx):
+        n = idx_to_node[i]
+        v.append(coords[n])
+
+    for face in st.faces:
+        col = 0
+        mapped_face = []
+
+        for node in face:
+            n = node
+            mapped_face.append(node_to_idx[node])
+            col += len(st.node_all_connections(n)) - 6
+        arbitraryN = next(iter(face))
+
+        # doesnt add triangles that span the inside of the cyl
+        if all([abs(theta_t[n] - theta_t[arbitraryN]) < pi for n in face]):
+            if all([abs(theta_x[n] - theta_x[arbitraryN]) < pi for n in face]):
+                f.append(mapped_face)
+
+    # mp.plot(np.array(v), filename="plots/test", shading={"point_size": 3})
+    v = np.array(v)
+    f = np.array(f)
+    p = mp.plot(
+        v,
+        f,
+        c=np.array(colors),
+        filename="plots/test",
+        shading=shading,
+        return_plot=True,
     )

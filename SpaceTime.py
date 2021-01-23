@@ -4,6 +4,7 @@ Trying to use node and face NOT vertex and simplex
 
 import Display
 import random
+from NodeObject import NodeObject
 
 
 class SpaceTime(object):
@@ -108,6 +109,9 @@ class SpaceTime(object):
                 index += 1
         self.max_node = index
 
+    def get_random_node(self):
+        return random.choice(self.nodes)
+
     # Made redundant by faces_containing dict, remove once fully validated
     def get_faces_containing(self, n):
         # get all simplices that contain a particular vertex
@@ -125,7 +129,8 @@ class SpaceTime(object):
         sub_space.dead_refrences = dead_nodes
 
         nodes = dead_nodes + [node]
-        faces = self.faces_containing[node]
+        # update this to use the dict instead (requires some work)
+        faces = self.get_faces_containing(node)
 
         for n in nodes:
             self.nodes.remove(n)
@@ -144,8 +149,8 @@ class SpaceTime(object):
 
         for f in sub_space.faces:
             sub_space.face_dilaton[f] = self.face_dilaton.pop(f)
-            sub_space.face_x[f] = self.face_x.pop(f)
-            sub_space.face_t[f] = self.face_t.pop(f)
+            # sub_space.face_x[f] = self.face_x.pop(f)
+            # sub_space.face_t[f] = self.face_t.pop(f)
 
         return sub_space
 
@@ -155,6 +160,7 @@ class SpaceTime(object):
         """
         # add a check to make sure that we are inserting unique new nodes
         nodes = sub_space.nodes
+        # print(nodes)
         faces = sub_space.faces
 
         for n in nodes:
@@ -176,27 +182,32 @@ class SpaceTime(object):
             # self.face_t[f] = sub_space.face_t[f]
 
         # This should probably be validated
-        self.contains_dead_refrences = False
+        self.dead_nodes = []
         # Can we get rid of sub_space at this point somehow?
 
     def move(self, node, future, past):
         """
         A move should add one node and 2 simplices. we can pop all the structures to be modified out of the dicts and then push them back in once they've been modified. This mean we need to know what could get modfified in any given move.
         """
+
+        # remove the subspace that is going to be modified
         sub_space = self.pop(node)
 
+        # increment the total node counter
         self.max_node += 1
         new_node = self.max_node
 
-        new_node_obj = node_object(sub_space, new_node)
-        node_obj = node_object(sub_space, node)
-        left_obj = node_object(sub_space, node_obj.left)
+        # create a node object for easy manipulation. This also automatically adds the node to the subspace
+        new_node_obj = NodeObject(sub_space, new_node)
+        node_obj = NodeObject(sub_space, node)
+        left_obj = NodeObject(sub_space, node_obj.left)
         left = node_obj.left
         right = node_obj.right
+
         # spatial changes.
         node_obj.set_left(new_node)
         new_node_obj.set_right(node)
-        new_node_obj.set_left(node_obj.left)
+        new_node_obj.set_left(left)
         left_obj.set_right(new_node)
 
         # future changes
@@ -204,20 +215,25 @@ class SpaceTime(object):
         f = sub_space.node_left[future]
 
         while f in node_obj.future:
-            # print(f)
             new_future_set.append(f)
-            sub_space.node_future[node].remove(f)
             f = sub_space.node_left[f]
         new_node_obj.set_future(new_future_set)
+        old_future_set = list(
+            set(sub_space.node_future[node]) - set(new_future_set)
+        ) + [future]
+        node_obj.set_future(old_future_set)
 
         # past changes
         new_past_set = [past]
         p = sub_space.node_left[past]
         while p in node_obj.past:
+            print("bop")
             new_past_set.append(p)
             sub_space.node_past[node].remove(p)
             p = sub_space.node_left[p]
         new_node_obj.set_past(new_past_set)
+        old_past_set = list(set(sub_space.node_past[node]) - set(new_past_set)) + [past]
+        node_obj.set_past(old_past_set)
 
         # face changes
         # remove old faces
@@ -262,8 +278,6 @@ class SpaceTime(object):
             sub_space.face_dilaton[new_face] = 100
 
         righmost_future = future
-        # while condition:
-        #     pass
 
         sub_space.faces.append(frozenset({node, new_node, future}))
         sub_space.face_dilaton[frozenset({node, new_node, future})] = 1
@@ -281,76 +295,29 @@ class SpaceTime(object):
         sub_space.face_dilaton[frozenset({left, new_node, leftmost_past})] = -1
 
         new_node_obj.set_faces([])
+        node_obj.set_faces([])
         self.push(sub_space)
 
 
-class node_object(object):
-    """This is just syntactic sugar to acces node relationships"""
-
-    def __init__(self, st, node_id):
-        super(node_object, self).__init__()
-        self.st = st
-        self.id = node_id
-
-        if node_id in st.nodes:
-            self.left = st.node_left[self.id]
-            self.right = st.node_right[self.id]
-            self.past = st.node_past[self.id]
-            self.future = st.node_future[self.id]
-            self.faces = st.faces_containing[self.id]
-        else:
-            st.nodes.append(self.id)
-
-    def set_left(self, val):
-        self.left = val
-        self.st.node_left[self.id] = val
-
-    def set_right(self, val):
-        self.right = val
-        self.st.node_right[self.id] = val
-
-    def set_past(self, val):
-        self.past = val
-        self.st.node_past[self.id] = val
-
-    def set_future(self, val):
-        self.future = val
-        self.st.node_future[self.id] = val
-
-    def set_faces(self, val):
-        self.faces = val
-        self.st.faces_containing[self.id] = val
-
-
-shading = {
-    "flat": True,  # Flat or smooth shading of triangles
-    "wireframe": True,
-    "wire_width": 1,
-    "wire_color": "red",  # Wireframe rendering
-    "width": 600,
-    "height": 600,  # Size of the viewer canvas
-    "antialias": True,  # Antialising, might not work on all GPUs
-    "scale": 2.0,  # Scaling of the model
-    "side": "DoubleSide",  # FrontSide, BackSide or DoubleSide rendering of the triangles
-    "colormap": "viridis",
-    "normalize": [None, None],  # Colormap and normalization for colors
-    "background": "#ffffff",  # Background color of the canvas
-    "line_width": 1.0,
-    "line_color": "black",  # Line properties of overlay lines
-    "bbox": False,  # Enable plotting of bounding box
-    "point_color": "red",
-    "point_size": 0.01,  # Point properties of overlay points
-}
 FST = SpaceTime()
-size = 5
-FST.generate_flat(size, size)
-FST.move(18, 18 + size + 1, 18 - size)
+size = 10
+FST.generate_flat(size, 10)
+random.seed(9)
+
+
+# for i in range(5):
+#     n = FST.get_random_node()
+#     f = random.choice(FST.node_future[n])
+#     p = random.choice(FST.node_past[n])
+#     print(n, f, p)
+print("m1")
+FST.move((16 + 30) % 100, (26 + 30) % 100, (5 + 30) % 100)
+print(FST.node_past[46])
+print("m2")
+FST.move((5 + 30) % 100, (15 + 30) % 100, (95 + 30) % 100)
+
+
 i = 0
-for n in FST.nodes:
-    i += 1
-    N = len(FST.node_all_connections(n)) - 6
-    # print(i)
-    # print(n, N)
-    # print()
 print("plottin")
-Display.plot_3d_cyl(FST, shading=shading)
+
+Display.plot_3d_cyl(FST)
