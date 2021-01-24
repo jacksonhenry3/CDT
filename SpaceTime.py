@@ -117,25 +117,34 @@ class SpaceTime(object):
         # get all simplices that contain a particular vertex
         return {face for face in self.faces if n in face}
 
-    def pop(self, node):
+    def pop(self, node_list):
         """
         This creates a new space-time by removing all nodes adjacent to node and returning that sub_space
         """
         sub_space = SpaceTime()
 
-        dead_nodes = self.node_all_connections(node)
-
-        self.dead_refrences = dead_nodes
-        sub_space.dead_refrences = dead_nodes
-
-        nodes = dead_nodes + [node]
-        # update this to use the dict instead (requires some work)
-        faces = self.get_faces_containing(node)
-
+        nodes = node_list.copy()
+        faces = []
+        for node in node_list:
+            nodes.extend(self.node_all_connections(node))
+            # update this to use the dict instead (requires some work)
+            faces.extend(self.get_faces_containing(node))
+        faces = list(set(faces))
+        nodes = list(set(nodes))
+        # remove all nodes from self
         for n in nodes:
             self.nodes.remove(n)
-        sub_space.nodes = nodes
+        self.dead_refrences = nodes.copy()  # i.e these nodes are no longer in the st
 
+        # remove all faces that contain anything in node_list
+        for f in faces:
+            self.faces.remove(f)
+
+        # set the subspace nodes and faces
+        sub_space.nodes = nodes.copy()
+        sub_space.faces = faces.copy()
+
+        # loop through all removed nodes and remove their properties from self and add them to sub_space
         for n in sub_space.nodes:
             sub_space.node_left[n] = self.node_left.pop(n)
             sub_space.node_right[n] = self.node_right.pop(n)
@@ -143,24 +152,28 @@ class SpaceTime(object):
             sub_space.node_future[n] = self.node_future.pop(n)
             sub_space.faces_containing[n] = self.faces_containing.pop(n)
 
-        for f in faces:
-            self.faces.remove(f)
-        sub_space.faces = faces
-
+        # loop through all removed faces and remove their properties from self and add them to sub_space
         for f in sub_space.faces:
             sub_space.face_dilaton[f] = self.face_dilaton.pop(f)
             # sub_space.face_x[f] = self.face_x.pop(f)
             # sub_space.face_t[f] = self.face_t.pop(f)
 
+        # dont forget to set subspace dead refrences
         return sub_space
 
     def push(self, sub_space):
         """
         This reinserts sub_space
         """
+
+        # Check to make sure that sub_space fills self aproapriatly
+        if not any(n not in sub_space.nodes for n in self.dead_refrences):
+            print("sub_space cannot fill space_time gap")
+            print("dead refrences are {}".format(self.dead_refrences))
+            print("sub_space nodes are {}".format(sub_space.nodes))
+
         # add a check to make sure that we are inserting unique new nodes
         nodes = sub_space.nodes
-        # print(nodes)
         faces = sub_space.faces
 
         for n in nodes:
@@ -191,7 +204,7 @@ class SpaceTime(object):
         """
 
         # remove the subspace that is going to be modified
-        sub_space = self.pop(node)
+        sub_space = self.pop([node])
 
         # increment the total node counter
         self.max_node += 1
@@ -298,26 +311,74 @@ class SpaceTime(object):
         node_obj.set_faces([])
         self.push(sub_space)
 
+    def imove(self, node):
+        """ merge two spatially adjacent nodes, always merges in one direction?"""
+        left = self.node_left[node]
+        sub_space = self.pop([node, left])
+
+        new_future = sub_space.node_future[left]
+        new_past = sub_space.node_past[left]
+        new_left = sub_space.node_left[left]
+
+        for f in new_future:
+            sub_space.node_past[f].remove(left)
+            if f not in sub_space.node_future[node]:
+                sub_space.node_future[node].append(f)
+
+        for p in new_past:
+            sub_space.node_future[p].remove(left)
+            if p not in sub_space.node_past[node]:
+                sub_space.node_past[node].append(p)
+
+        sub_space.node_left[node] = new_left
+        sub_space.node_right[new_left] = node
+
+        sub_space.nodes.remove(left)
+        del sub_space.node_left[left]
+        del sub_space.node_right[left]
+        del sub_space.node_past[left]
+        del sub_space.node_future[left]
+        del sub_space.faces_containing[left]
+
+        faces = sub_space.get_faces_containing(left)
+
+        sub_space.faces = [x for x in sub_space.faces if x not in faces]
+        print(sub_space.faces)
+        for face in faces:
+            new_face = []
+            if node not in face:
+                for n in face:
+                    if n == left:
+                        n = node
+                    new_face.append(n)
+                sub_space.faces.append(frozenset(new_face))
+                sub_space.face_dilaton[frozenset(new_face)] = -1
+        print(sub_space.faces)
+
+        self.push(sub_space)
+
+
+# move fails when this is executed
+# FST = SpaceTime()
+# size = 10
+# FST.generate_flat(size, 10)
+# random.seed(9)
+# print("m1")
+# FST.move((16 + 30) % 100, (26 + 30) % 100, (5 + 30) % 100)
+# print("m2")
+# FST.move((5 + 30) % 100, (15 + 30) % 100, (95 + 30) % 100)
 
 FST = SpaceTime()
 size = 10
-FST.generate_flat(size, 10)
-random.seed(9)
+FST.generate_flat(size, size)
 
 
-# for i in range(5):
-#     n = FST.get_random_node()
-#     f = random.choice(FST.node_future[n])
-#     p = random.choice(FST.node_past[n])
-#     print(n, f, p)
-print("m1")
-FST.move((16 + 30) % 100, (26 + 30) % 100, (5 + 30) % 100)
-print(FST.node_past[46])
-print("m2")
-FST.move((5 + 30) % 100, (15 + 30) % 100, (95 + 30) % 100)
-
+n = FST.get_random_node()
+FST.imove(n)
+# FST.imove(n)
 
 i = 0
+# sub_space = FST.pop([15])
 print("plottin")
 
 Display.plot_3d_cyl(FST)
