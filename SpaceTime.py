@@ -343,7 +343,6 @@ class SpaceTime(object):
         faces = sub_space.get_faces_containing(left)
 
         sub_space.faces = [x for x in sub_space.faces if x not in faces]
-        print(sub_space.faces)
         for face in faces:
             new_face = []
             if node not in face:
@@ -353,7 +352,6 @@ class SpaceTime(object):
                     new_face.append(n)
                 sub_space.faces.append(frozenset(new_face))
                 sub_space.face_dilaton[frozenset(new_face)] = -1
-        print(sub_space.faces)
 
         self.push(sub_space)
 
@@ -361,24 +359,15 @@ class SpaceTime(object):
 # move fails when this is executed
 # FST = SpaceTime()
 # size = 10
-# FST.generate_flat(size, 10)
+# FST.generate_flat(size, size)
 # random.seed(9)
 # print("m1")
 # FST.move((16 + 30) % 100, (26 + 30) % 100, (5 + 30) % 100)
 # print("m2")
 # FST.move((5 + 30) % 100, (15 + 30) % 100, (95 + 30) % 100)
 
-FST = SpaceTime()
-size = 10
-FST.generate_flat(size, size)
 
-
-n = FST.get_random_node()
-FST.imove(n)
-# FST.imove(n)
-
-i = 0
 # sub_space = FST.pop([15])
 print("plottin")
 
-Display.plot_3d_cyl(FST)
+Display.plot_2d(FST)

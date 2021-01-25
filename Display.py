@@ -146,18 +146,6 @@ def get_smart_coords(st):
     return (theta_x, theta_t)
 
 
-def plot_2d(st):
-    theta_x, theta_t = get_smart_coords(st)
-
-    x_pnts = []
-    y_pnts = []
-    for n in st.nodes:
-        x_pnts.append(theta_x[n])
-        y_pnts.append(theta_t[n])
-    plt.scatter(x_pnts, y_pnts)
-    plt.show()
-
-
 def plot_3d_torus(st, shading=None):
     theta_x, theta_t = get_smart_coords(st)
 
@@ -377,3 +365,87 @@ def plot_3d_cyl(st, shading=None):
         shading=shading,
         return_plot=True,
     )
+
+
+def plot_2d(st, offeset=0):
+    theta_x, theta_t = get_smart_coords(st)
+    theta_x, theta_t = get_naive_coords(st)
+
+    import numpy as np
+    from numpy import sin, cos
+    import matplotlib.pyplot as plt
+    from matplotlib.collections import LineCollection
+    import random
+
+    c = 3
+    a = 1
+    idx = 0
+    idx_to_node = {}
+    node_to_idx = {}
+    coords = {}
+    colors = []
+    for n in st.nodes:
+        idx_to_node[idx] = n
+        node_to_idx[n] = idx
+        v = theta_x[n]
+        u = theta_t[n]
+
+        coords[n] = (
+            v,
+            u,
+        )
+
+        colors.append((len(st.node_all_connections(n)) - 6))
+        idx += 1
+
+    x = [coords[n][0] for n in st.nodes]
+    y = [coords[n][1] for n in st.nodes]
+
+    plt.scatter(x, y)
+
+    edges1 = []
+
+    import itertools
+
+    for face in st.faces:
+        for pair in itertools.product(face, repeat=2):
+            n1 = pair[0]
+            n2 = pair[1]
+            # doesnt add triangles that span the inside of the cyl
+            if abs(theta_t[n1] - theta_t[n2]) < pi:
+                if abs(theta_x[n1] - theta_x[n2]) < pi:
+                    edges1.append(
+                        [
+                            coords[n1] - np.array([offeset, offeset]),
+                            coords[n2] - np.array([offeset, offeset]),
+                        ]
+                    )
+
+    edges2 = []
+
+    import itertools
+
+    for node in st.nodes:
+        for adjacent in st.node_all_connections(node):
+            if abs(theta_t[node] - theta_t[adjacent]) < pi:
+                if abs(theta_x[node] - theta_x[adjacent]) < pi:
+                    edges2.append(
+                        [
+                            coords[node] + np.array([offeset, offeset]),
+                            coords[adjacent] + np.array([offeset, offeset]),
+                        ]
+                    )
+
+    plt.gca().add_collection(
+        LineCollection(
+            edges1, color=(0.345, 0.0941, 0.2705, 1), antialiaseds=True, linewidth=4
+        )
+    )
+    plt.gca().add_collection(
+        LineCollection(edges2, color=(1, 0.764, 0, 1), antialiaseds=True)
+    )
+    # plt.gca().add_collection(
+    #     LineCollection(mismatch, color=(0, 0, 0, 1), antialiaseds=True)
+    # )
+    plt.scatter(x, y, color="black", zorder=2)
+    plt.show()
