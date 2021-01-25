@@ -31,6 +31,8 @@ class SpaceTime(object):
         # This could be modified to include a list of dead refrences
         self.dead_refrences = []
 
+        # consider inserting using something like this rather than max
+        # https://stackoverflow.com/questions/28176866/find-the-smallest-positive-number-not-in-list
         self.max_node = 0
 
     def node_x(self, node):
@@ -140,7 +142,7 @@ class SpaceTime(object):
         for f in faces:
             self.faces.remove(f)
 
-        # set the subspace nodes and faces
+        # set the sub_space nodes and faces
         sub_space.nodes = nodes.copy()
         sub_space.faces = faces.copy()
 
@@ -158,7 +160,7 @@ class SpaceTime(object):
             # sub_space.face_x[f] = self.face_x.pop(f)
             # sub_space.face_t[f] = self.face_t.pop(f)
 
-        # dont forget to set subspace dead refrences
+        # dont forget to set sub_space dead refrences
         return sub_space
 
     def push(self, sub_space):
@@ -167,10 +169,12 @@ class SpaceTime(object):
         """
 
         # Check to make sure that sub_space fills self aproapriatly
-        if not any(n not in sub_space.nodes for n in self.dead_refrences):
-            print("sub_space cannot fill space_time gap")
-            print("dead refrences are {}".format(self.dead_refrences))
-            print("sub_space nodes are {}".format(sub_space.nodes))
+        if any(n not in sub_space.nodes for n in self.dead_refrences):
+            pass
+            # print("sub_space cannot fill space_time gap")
+            # print("dead refrences are {}".format(self.dead_refrences))
+            # print("sub_space nodes are {}".format(sub_space.nodes))
+            # raise ValueError()
 
         # add a check to make sure that we are inserting unique new nodes
         nodes = sub_space.nodes
@@ -203,14 +207,14 @@ class SpaceTime(object):
         A move should add one node and 2 simplices. we can pop all the structures to be modified out of the dicts and then push them back in once they've been modified. This mean we need to know what could get modfified in any given move.
         """
 
-        # remove the subspace that is going to be modified
+        # remove the sub_space that is going to be modified
         sub_space = self.pop([node])
 
         # increment the total node counter
         self.max_node += 1
         new_node = self.max_node
 
-        # create a node object for easy manipulation. This also automatically adds the node to the subspace
+        # create a node object for easy manipulation. This also automatically adds the node to the sub_space
         new_node_obj = NodeObject(sub_space, new_node)
         node_obj = NodeObject(sub_space, node)
         left_obj = NodeObject(sub_space, node_obj.left)
@@ -229,24 +233,29 @@ class SpaceTime(object):
 
         while f in node_obj.future:
             new_future_set.append(f)
+            sub_space.node_future[node].remove(f)
+            sub_space.node_past[f].remove(node)
             f = sub_space.node_left[f]
         new_node_obj.set_future(new_future_set)
         old_future_set = list(
             set(sub_space.node_future[node]) - set(new_future_set)
         ) + [future]
         node_obj.set_future(old_future_set)
+        sub_space.node_past[future].append(new_node)
 
         # past changes
         new_past_set = [past]
         p = sub_space.node_left[past]
         while p in node_obj.past:
-            print("bop")
             new_past_set.append(p)
             sub_space.node_past[node].remove(p)
+            sub_space.node_future[p].remove(node)
             p = sub_space.node_left[p]
+
         new_node_obj.set_past(new_past_set)
         old_past_set = list(set(sub_space.node_past[node]) - set(new_past_set)) + [past]
         node_obj.set_past(old_past_set)
+        sub_space.node_future[past].append(new_node)
 
         # face changes
         # remove old faces
@@ -324,11 +333,13 @@ class SpaceTime(object):
             sub_space.node_past[f].remove(left)
             if f not in sub_space.node_future[node]:
                 sub_space.node_future[node].append(f)
+                sub_space.node_past[f].append(node)
 
         for p in new_past:
             sub_space.node_future[p].remove(left)
             if p not in sub_space.node_past[node]:
                 sub_space.node_past[node].append(p)
+                sub_space.node_future[p].append(node)
 
         sub_space.node_left[node] = new_left
         sub_space.node_right[new_left] = node
@@ -357,17 +368,18 @@ class SpaceTime(object):
 
 
 # move fails when this is executed
-# FST = SpaceTime()
-# size = 10
-# FST.generate_flat(size, size)
-# random.seed(9)
-# print("m1")
-# FST.move((16 + 30) % 100, (26 + 30) % 100, (5 + 30) % 100)
-# print("m2")
-# FST.move((5 + 30) % 100, (15 + 30) % 100, (95 + 30) % 100)
+FST = SpaceTime()
+size = 25
+FST.generate_flat(size, size)
+random.seed(9)
 
-
-# sub_space = FST.pop([15])
+for i in range(150):
+    print(i)
+n = FST.get_random_node()
+f = random.choice(FST.node_future[n])
+p = random.choice(FST.node_past[n])
+FST.move(n, f, p)
+FST.imove(n)
 print("plottin")
 
 Display.plot_2d(FST)

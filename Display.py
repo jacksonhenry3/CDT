@@ -368,7 +368,7 @@ def plot_3d_cyl(st, shading=None):
 
 
 def plot_2d(st, offeset=0):
-    theta_x, theta_t = get_smart_coords(st)
+    # theta_x, theta_t = get_smart_coords(st)
     theta_x, theta_t = get_naive_coords(st)
 
     import numpy as np
@@ -437,15 +437,19 @@ def plot_2d(st, offeset=0):
                     )
 
     plt.gca().add_collection(
-        LineCollection(
-            edges1, color=(0.345, 0.0941, 0.2705, 1), antialiaseds=True, linewidth=4
-        )
+        LineCollection(edges1, color=(1, 0, 0, 0.5), antialiaseds=True, linewidth=6)
     )
     plt.gca().add_collection(
-        LineCollection(edges2, color=(1, 0.764, 0, 1), antialiaseds=True)
+        LineCollection(edges2, color=(0, 0, 1, 0.5), antialiaseds=True, linewidth=3)
     )
     # plt.gca().add_collection(
     #     LineCollection(mismatch, color=(0, 0, 0, 1), antialiaseds=True)
     # )
     plt.scatter(x, y, color="black", zorder=2)
+
+    for n in st.nodes:
+        plt.annotate(n, coords[n], backgroundcolor="white", va="center", ha="center")
+    plt.legend(
+        ("nodes", "Triangles", "node connections"), loc="upper right", shadow=True
+    )
     plt.show()

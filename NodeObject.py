@@ -27,10 +27,16 @@ class NodeObject(object):
     def set_past(self, val):
         self.past = val
         self.st.node_past[self.id] = val
+        for n in val:
+            if self.id not in self.st.node_future[n]:
+                self.st.node_future[n].append(self.id)
 
     def set_future(self, val):
         self.future = val
         self.st.node_future[self.id] = val
+        for n in val:
+            if self.id not in self.st.node_past[n]:
+                self.st.node_past[n].append(self.id)
 
     def set_faces(self, val):
         self.faces = val
