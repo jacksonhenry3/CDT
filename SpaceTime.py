@@ -236,12 +236,12 @@ class SpaceTime(object):
             sub_space.node_future[node].remove(f)
             sub_space.node_past[f].remove(node)
             f = sub_space.node_left[f]
-        new_node_obj.set_future(new_future_set)
+        new_node_obj.set_future(list(set(new_future_set)))
         old_future_set = list(
             set(sub_space.node_future[node]) - set(new_future_set)
         ) + [future]
         node_obj.set_future(old_future_set)
-        sub_space.node_past[future].append(new_node)
+        # sub_space.node_past[future].append(new_node)
 
         # past changes
         new_past_set = [past]
@@ -255,7 +255,7 @@ class SpaceTime(object):
         new_node_obj.set_past(new_past_set)
         old_past_set = list(set(sub_space.node_past[node]) - set(new_past_set)) + [past]
         node_obj.set_past(old_past_set)
-        sub_space.node_future[past].append(new_node)
+        # sub_space.node_future[past].append(new_node)
 
         # face changes
         # remove old faces
@@ -369,17 +369,21 @@ class SpaceTime(object):
 
 # move fails when this is executed
 FST = SpaceTime()
-size = 25
+size = 10
 FST.generate_flat(size, size)
 random.seed(9)
+#
+for i in range(8000):
+    n = FST.get_random_node()
+    f = random.choice(FST.node_future[n])
+    p = random.choice(FST.node_past[n])
+    FST.move(n, f, p)
+    FST.imove(n)
+    print(n, f, p)
 
-for i in range(150):
-    print(i)
-n = FST.get_random_node()
-f = random.choice(FST.node_future[n])
-p = random.choice(FST.node_past[n])
-FST.move(n, f, p)
-FST.imove(n)
+# FST.move(17, 27, 6)
+
+# FST.imove(n)
 print("plottin")
 
 Display.plot_2d(FST)

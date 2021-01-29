@@ -116,12 +116,14 @@ def get_naive_coords(st):
     return (theta_x, theta_t)
 
 
-def get_smart_coords(st):
+def get_smart_coords_old(st):
     theta_x, theta_t = get_naive_coords(st)
 
     for i in range(100):
         used = []
         n = st.nodes[0]
+        left = st.node_left[n]
+        right = st.node_right[n]
         while n not in used:
             used.append(n)
 
@@ -133,11 +135,58 @@ def get_smart_coords(st):
                 theta = theta_x[p]
                 value1 += sin(theta)
                 value2 += cos(theta)
-            # for f in future:
-            #     theta = theta_x[p]
-            #     value1 += sin(theta)
-            #     value2 += cos(theta)
-            theta_x[n] = arctan2(value1, value2)
+
+            min = theta_x[left]
+            max = theta_x[right]
+            new_theta = arctan2(value1, value2)
+            # if min < new_theta < max:
+            theta_x[n] = new_theta
+
+            n = st.node_right[n]
+            if n in used:
+                n = st.node_future[n][0]
+
+    return (theta_x, theta_t)
+
+
+def angular_seperation(theta_1, theta_2):
+    return -(((theta_1 - theta_2) + pi) % (2 * pi) - pi)
+
+
+def get_smart_coords(st):
+    theta_x, theta_t = get_naive_coords(st)
+
+    for i in range(100):
+        used = []
+        n = st.nodes[0]
+
+        while n not in used:
+            used.append(n)
+
+            # there has got to be a more effecient way to find angle bounds
+            left = st.node_left[n]
+            right = st.node_right[n]
+            bounds = [theta_x[left], theta_x[right]]
+
+            value1 = 0
+            value2 = 0
+            for p in st.node_all_connections(n):
+                theta = theta_x[p]
+                value1 += sin(theta)
+                value2 += cos(theta)
+
+            new_theta = arctan2(value1, value2)
+            dist = angular_seperation(new_theta, theta)
+            dist1 = angular_seperation(bounds[0], theta)
+            dist2 = angular_seperation(bounds[1], theta)
+            newdist1 = angular_seperation(bounds[0], new_theta)
+            newdist2 = angular_seperation(bounds[1], new_theta)
+            if newdist1 / dist1 < 0:
+                dist = newdist1
+            if newdist2 / dist2 < 0:
+                dist = newdist2
+
+            theta_x[n] += dist / 20.0
 
             n = st.node_right[n]
             if n in used:
@@ -147,6 +196,26 @@ def get_smart_coords(st):
 
 
 def plot_3d_torus(st, shading=None):
+    if shading is None:
+        shading = {
+            "flat": True,  # Flat or smooth shading of triangles
+            "wireframe": True,
+            "wire_width": 100,
+            "wire_color": "black",  # Wireframe rendering
+            "width": 600,
+            "height": 600,  # Size of the viewer canvas
+            "antialias": True,  # Antialising, might not work on all GPUs
+            "scale": 2.0,  # Scaling of the model
+            "side": "DoubleSide",  # FrontSide, BackSide or DoubleSide rendering of the triangles
+            "colormap": "Spectral",
+            "normalize": [None, None],  # Colormap and normalization for colors
+            "background": "#222",  # Background color of the canvas
+            "line_width": 1.0,
+            "line_color": "black",  # Line properties of overlay lines
+            "bbox": False,  # Enable plotting of bounding box
+            "point_color": "red",
+            "point_size": 0.01,  # Point properties of overlay points
+        }
     theta_x, theta_t = get_smart_coords(st)
 
     import numpy as np
@@ -279,7 +348,7 @@ def plot_3d_cyl(st, shading=None):
     )
 
 
-def plot_3d_cyl(st, shading=None):
+def plot_3d_cyl_SDFIKSJDBFSJDIFB(st, shading=None):
     # remove the ignored time triangles! This only works for spetial geometries.
 
     if shading is None:
@@ -368,9 +437,9 @@ def plot_3d_cyl(st, shading=None):
 
 
 def plot_2d(st, offeset=0):
-    # theta_x, theta_t = get_smart_coords(st)
-    theta_x, theta_t = get_naive_coords(st)
-
+    theta_x, theta_t = get_smart_coords_old(st)
+    # theta_x, theta_t = get_naive_coords(st)
+    #
     import numpy as np
     from numpy import sin, cos
     import matplotlib.pyplot as plt
@@ -401,14 +470,12 @@ def plot_2d(st, offeset=0):
     x = [coords[n][0] for n in st.nodes]
     y = [coords[n][1] for n in st.nodes]
 
-    plt.scatter(x, y)
-
     edges1 = []
 
     import itertools
 
     for face in st.faces:
-        for pair in itertools.product(face, repeat=2):
+        for pair in itertools.combinations(face, 2):
             n1 = pair[0]
             n2 = pair[1]
             # doesnt add triangles that span the inside of the cyl
@@ -423,13 +490,38 @@ def plot_2d(st, offeset=0):
 
     edges2 = []
 
+    edges_past_pointing = []
+    edges_future_pointing = []
+    edges_space_pointing = []
     import itertools
 
     for node in st.nodes:
-        for adjacent in st.node_all_connections(node):
+        past_asj = None
+        for adjacent in st.node_past[node]:
+            if past_asj == adjacent:
+                print(adjacent)
+            past_asj = adjacent
             if abs(theta_t[node] - theta_t[adjacent]) < pi:
                 if abs(theta_x[node] - theta_x[adjacent]) < pi:
-                    edges2.append(
+                    edges_past_pointing.append(
+                        [
+                            coords[node] + np.array([offeset, offeset]),
+                            coords[adjacent] + np.array([offeset, offeset]),
+                        ]
+                    )
+        for adjacent in st.node_future[node]:
+            if abs(theta_t[node] - theta_t[adjacent]) < pi:
+                if abs(theta_x[node] - theta_x[adjacent]) < pi:
+                    edges_future_pointing.append(
+                        [
+                            coords[node] + np.array([offeset, offeset]),
+                            coords[adjacent] + np.array([offeset, offeset]),
+                        ]
+                    )
+        for adjacent in st.node_x(node):
+            if abs(theta_t[node] - theta_t[adjacent]) < pi:
+                if abs(theta_x[node] - theta_x[adjacent]) < pi:
+                    edges_space_pointing.append(
                         [
                             coords[node] + np.array([offeset, offeset]),
                             coords[adjacent] + np.array([offeset, offeset]),
@@ -437,19 +529,35 @@ def plot_2d(st, offeset=0):
                     )
 
     plt.gca().add_collection(
-        LineCollection(edges1, color=(1, 0, 0, 0.5), antialiaseds=True, linewidth=6)
+        LineCollection(
+            edges_future_pointing, color=(0, 0, 0, 1), antialiaseds=True, linewidth=0.6,
+        )
     )
     plt.gca().add_collection(
-        LineCollection(edges2, color=(0, 0, 1, 0.5), antialiaseds=True, linewidth=3)
+        LineCollection(
+            edges_past_pointing, color=(0, 0, 0, 1), antialiaseds=True, linewidth=0.6,
+        )
     )
+    plt.gca().add_collection(
+        LineCollection(
+            edges_space_pointing, color=(0, 0, 0, 1), antialiaseds=True, linewidth=0.6,
+        )
+    )
+    # plt.gca().add_collection(
+    #     LineCollection(edges2, color=(0, 0, 1, 0.1), antialiaseds=True, linewidth=3)
+    # )
     # plt.gca().add_collection(
     #     LineCollection(mismatch, color=(0, 0, 0, 1), antialiaseds=True)
     # )
-    plt.scatter(x, y, color="black", zorder=2)
+    plt.scatter(x, y, color="white", zorder=2, s=300, edgecolors="black")
 
+    # for n in st.nodes:
+    #     plt.annotate(
+    #         n, coords[n], backgroundcolor="white", va="center", ha="center",
+    #     )
     for n in st.nodes:
-        plt.annotate(n, coords[n], backgroundcolor="white", va="center", ha="center")
-    plt.legend(
-        ("nodes", "Triangles", "node connections"), loc="upper right", shadow=True
-    )
+        plt.annotate(n, coords[n], va="center", ha="center", c="black")
+    # plt.legend(
+    #     ("nodes", "Triangles", "node connections"), loc="upper right", shadow=True
+    # )
     plt.show()
