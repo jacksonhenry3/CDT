@@ -114,6 +114,23 @@ class SpaceTime(object):
     def get_random_node(self):
         return random.choice(self.nodes)
 
+    def get_layers(self, n=False):
+        """returns a list of lists where each list contains all nodes in a specific layer, contains all nodes """
+        if not n:
+            n = self.nodes[0]
+        used = []
+        layers = []
+        layer = []
+        while n not in used:
+            layer.append(n)
+            used.append(n)
+            n = self.node_left[n]
+            if n in used:
+                layers.append(layer)
+                layer = []
+                n = self.node_future[n][0]
+        return layers
+
     # Made redundant by faces_containing dict, remove once fully validated
     def get_faces_containing(self, n):
         # get all simplices that contain a particular vertex
@@ -369,21 +386,22 @@ class SpaceTime(object):
 
 # move fails when this is executed
 FST = SpaceTime()
-size = 10
+size = 100
 FST.generate_flat(size, size)
 random.seed(9)
 #
-for i in range(8000):
+for i in range(800):
     n = FST.get_random_node()
     f = random.choice(FST.node_future[n])
     p = random.choice(FST.node_past[n])
     FST.move(n, f, p)
-    FST.imove(n)
-    print(n, f, p)
+    n = FST.get_random_node()
+    # FST.imove(n)
+    # print(n, f, p)
 
 # FST.move(17, 27, 6)
 
 # FST.imove(n)
 print("plottin")
-
-Display.plot_2d(FST)
+# Display.get_naive_coords(FST)
+Display.plot_3d_torus(FST)
