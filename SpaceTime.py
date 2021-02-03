@@ -386,18 +386,20 @@ class SpaceTime(object):
 
 # move fails when this is executed
 FST = SpaceTime()
-size = 100
+size = 32
 FST.generate_flat(size, size)
 random.seed(9)
 #
-for i in range(800):
+for i in range(10 ** 2):
+    if i % 10 ** 3 == 0:
+        print(i)
     n = FST.get_random_node()
     f = random.choice(FST.node_future[n])
     p = random.choice(FST.node_past[n])
     FST.move(n, f, p)
     n = FST.get_random_node()
-    # FST.imove(n)
-    # print(n, f, p)
+    FST.imove(n)
+# print(n, f, p)
 
 # FST.move(17, 27, 6)
 

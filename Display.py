@@ -120,39 +120,19 @@ import math
 
 def get_smart_coords(st):
     theta_x, theta_t = get_naive_coords(st)
-    layer = []
-    theta = 0
+    layers = st.get_layers()
 
-    for i in range(1):
-        print()
-        print(i)
-        print()
-        used = []
-        n = st.nodes[0]
-        while n not in used:
-            used.append(n)
-
-            for connection in st.node_past[n]:
+    for layer in layers:
+        layer_total = 0
+        for n in layer:
+            for connection in st.node_all_connections(n):
                 delta = theta_x[connection] - theta_x[n]
                 delta = (delta + pi) % (2 * pi) - pi
-                theta += delta
-                # print(connection)
-                # print(n)
-                # print(theta)
-                # print()
-                # if math.isnan(theta):
-                #     print("DONE")
-                #     exit()
-            layer.append(n)
-            n = st.node_right[n]
-            if n in used:
-                print(theta)
-                for l in layer:
-                    theta_x[l] = (theta_x[l] + theta) % (2 * pi)
-                # print(theta)
-                theta = 0
-                layer = []
-                n = st.node_future[n][0]
+                layer_total += delta
+        layer_avg = layer_total / len(layer)
+        print(layer_avg)
+        for n in layer:
+            theta_x[n] += layer_avg / 2
 
     return (theta_x, theta_t)
 
@@ -182,7 +162,7 @@ def plot_3d_torus(st, shading=None):
             "point_color": "red",
             "point_size": 0.01,  # Point properties of overlay points
         }
-    theta_x, theta_t = get_naive_coords(st)
+    theta_x, theta_t = get_smart_coords(st)
 
     import numpy as np
     from numpy import sin, cos
@@ -404,7 +384,7 @@ def plot_3d_cyl_SDFIKSJDBFSJDIFB(st, shading=None):
 
 def plot_2d(st, offeset=0):
     # theta_x, theta_t = get_smart_coords_old(st)
-    theta_x, theta_t = get_naive_coords(st)
+    theta_x, theta_t = get_smart_coords(st)
     #
     import numpy as np
     from numpy import sin, cos
