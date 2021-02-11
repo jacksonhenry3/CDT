@@ -386,24 +386,22 @@ class SpaceTime(object):
 
 # move fails when this is executed
 FST = SpaceTime()
-size = 32
+size = 16
 FST.generate_flat(size, size)
-random.seed(9)
+random.seed(9230)
 #
-for i in range(10 ** 2):
-    if i % 10 ** 3 == 0:
+for i in range(1000):
+    if i % 100:
         print(i)
     n = FST.get_random_node()
     f = random.choice(FST.node_future[n])
     p = random.choice(FST.node_past[n])
     FST.move(n, f, p)
-    n = FST.get_random_node()
-    FST.imove(n)
-# print(n, f, p)
+    # n = FST.get_random_node()
+    # FST.imove(n)
 
-# FST.move(17, 27, 6)
 
 # FST.imove(n)
 print("plottin")
 # Display.get_naive_coords(FST)
-Display.plot_3d_torus(FST)
+Display.plot_2d(FST)

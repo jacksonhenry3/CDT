@@ -1,5 +1,5 @@
 import numpy as np
-from numpy import arctan2, cos, sin
+from numpy import arctan2, cos, sin, exp
 from math import pi
 import matplotlib.pyplot as plt
 import math
@@ -14,6 +14,21 @@ def angular_seperation(theta_1, theta_2):
         print("FAILED")
         quit()
     return res
+
+
+def is_between(theta_1, theta_2, arg):
+    # sanitize the angles
+    start = theta_1 % (2 * pi)
+    end = (theta_2) % (2 * pi)
+    arg = arg % (2 * pi)
+
+    # get how far aspart the bounds are and in what direction
+    sep = angular_seperation(start, end)
+    # get how far apart the arg is from the starting bound
+    delta = angular_seperation(start, arg)
+
+    # check if they are the same sign and check if delta is smaller than sep
+    return sep / delta > 0 and abs(delta) < abs(sep)
 
 
 # Adjacency matrices
@@ -109,24 +124,26 @@ def get_naive_coords(st):
     """
     Returns two dicts with (space angle , time angle)
     """
-    used = []
     layers = np.array(st.get_layers())
     T = len(layers)
     theta_x = []
     theta_t = []
+
+    # this whole shift thing is, it think, unesescarily complicated, perhaps ther is a mod 2 pi that copuld deal with it like in the  time weighted coords function
     shift = -np.repeat(np.arange(0, T), 2)
     for t, layer in enumerate(layers):
         N = len(layer)
-        # print(N)
-        # theta_x.append(np.roll(np.arange(N), -(t)) / N * 2 * pi - pi / N * (t % 2))
-        theta_x.append(np.roll(np.arange(N), shift[t]) / N * 2 * pi + pi / N * (-t % 2))
+        slot_width = 2 * pi / N
+        theta_x.append(
+            np.roll(np.arange(N) + slot_width / 2.0, shift[t]) * slot_width
+            + slot_width / 2.0 * (-t % 2)
+        )
         theta_t.append(np.full(N, t) / T * 2 * pi)
     theta_x = theta_x
     theta_t = theta_t
     theta_x_dict = {}
     theta_t_dict = {}
-    # print(theta_t)
-    # print(theta_x)
+
     for t, layer in enumerate(layers):
         for x, n in enumerate(layer):
             theta_x_dict[n] = theta_x[t][x]
@@ -135,97 +152,199 @@ def get_naive_coords(st):
     return (theta_x_dict, theta_t_dict)
 
 
-def get_preserve_x_length_coords(st):
-    """returns x and t angles where spatial seperation is constant and the overall rotation of a spatial section is designed to minimize tim-like edge-lengths"""
-    theta_x, theta_t = get_naive_coords(st)
+# def get_naive_coords(st):
+#     """
+#     Returns two dicts with (space angle , time angle)
+#     """
+#     layers = np.array(st.get_layers())
+#     T = len(layers)
+#     theta_x = []
+#     theta_t = []
+#
+#     for t, layer in enumerate(layers):
+#         N = len(layer)
+#         slot_width = 2 * pi / N
+#         theta_x.append((np.arange(N) + slot_width / 2.0) * slot_width)
+#         theta_t.append(np.full(N, t) / T * 2 * pi)
+#     theta_x = theta_x
+#     theta_t = theta_t
+#     theta_x_dict = {}
+#     theta_t_dict = {}
+#
+#     for t, layer in enumerate(layers):
+#         for x, n in enumerate(layer):
+#             theta_x_dict[n] = theta_x[t][x]
+#             theta_t_dict[n] = theta_t[t][x]
+#
+#     return (theta_x_dict, theta_t_dict)
+
+
+def get_naive_layer_shift(st, theta_x=False, theta_t=False):
+    if not theta_x or not theta_t:
+        theta_x, theta_t = get_spring_coords(st)
     layers = st.get_layers()
+    for t, layer in enumerate(layers[1:]):
+        t += 1
+        offset = 0
+        for n in layer:
+            d_offset = sum(
+                [
+                    angular_seperation(theta_x[n], theta_x[c]) / len(layer)
+                    for c in st.node_past[n]
+                ]
+            )
+            print(d_offset)
+            offset = offset + d_offset
+        print(t)
+        print(offset / len(layer))
 
-    for layer in layers:
-        layer_total = 0
-        for n in layer:
-            for connection in st.node_all_connections(n):
-                delta = angular_seperation(theta_x[connection], theta_x[n])
-                layer_total += delta
-        layer_avg = layer_total / len(layer)
-        print(layer_avg)
-        for n in layer:
-            theta_x[n] += layer_avg / 2
+        print()
+        for m in layer:
+            theta_x[m] = (theta_x[m] + offset / 2.0) % (2 * pi)
 
     return (theta_x, theta_t)
 
 
-def get_x_spring_coords(st, iterations=1000, k=0.1, b=1, dt=0.01):
-    """returns x and t angles where each nodes edges are treated like spatial springs. I.E. the time-like layers are still regularly seperated but the x-position should minimize the total connection length."""
+def get_time_weighted_coords(st):
+    """
+        Returns two dicts with (space angle , time angle)
+        """
+    layers = np.array(st.get_layers())
+    T = len(layers)
+    theta_x_dict = {}
+    theta_t_dict = {}
+    shift = -np.repeat(np.arange(0, T), 2)
+    total_time_edges = [sum([len(st.node_t(n)) for n in layer]) for layer in layers]
+    for t, layer in enumerate(layers):
+        X = len(layer)
+        slot_width = 2 * pi / total_time_edges[t]
+        # this 4 should be replaced by a calcuation of the first node time connections
+        node = layer[0]
+        theta_x = len(st.node_t(node)) * slot_width / 2.0 * t
+        for n in layer:
+            theta_x = (theta_x + 1 / 2.0 * slot_width * len(st.node_t(n))) % (2 * pi)
+            theta_x_dict[n] = theta_x
+            theta_t_dict[n] = t / T * 2 * pi
+            theta_x = (theta_x + 1 / 2.0 * slot_width * len(st.node_t(n))) % (2 * pi)
+            prev_n = n
+
+    return (theta_x_dict, theta_t_dict)
+
+
+def get_average_coords(st):
     theta_x, theta_t = get_naive_coords(st)
-    theta_x_tmp = theta_x
+
+    for i in range(200):
+        for n in st.nodes:
+            # print(n)
+            # sums the x length of all connections to n
+            total_x_length = sum(
+                [
+                    angular_seperation(theta_x[n], theta_x[c])
+                    for c in st.node_all_connections(n)
+                ]
+            )
+            print(angular_seperation(total_x_length, 0))
+            # attempt to change posiotion by the total difference therby reducing the total difference to zero
+            new_x_theta = (theta_x[n] + total_x_length / 200.0) % (2 * pi)
+            l = theta_x[st.node_left[n]]
+            r = theta_x[st.node_right[n]]
+
+            if is_between(l, r, new_x_theta):
+                theta_x[n] = new_x_theta
+
+    return (theta_x, theta_t)
+
+
+def get_spring_coords(st, dt=0.015, k=1.0, b=2.0):
+    theta_x, theta_t = get_naive_coords(st)
+
     v = {n: 0 for n in st.nodes}
 
-    # one iteration
-    # random.shuffle
-    for i in range(iterations):
-        # print(i)
+    for i in range(500):
+        for n in st.nodes:
+            # print(n)
+            # sums the x length of all connections to n
+            dx = sum([angular_seperation(theta_x[n], theta_x[c]) for c in st.node_t(n)])
+            a = k * dx
+            for c in st.node_x(n):
+                dx = angular_seperation(theta_x[n], theta_x[c])
+                sign = dx / abs(dx)
+                a -= sign * 0.07 / (dx ** 2)
+            a -= b * v[n]
+            vel = v[n] + a * dt
+            new_x_theta = (theta_x[n] + vel * dt) % (2 * pi)
 
-        for layer in st.get_layers():
-            for n in layer:
-                delta = 0
-                for connection in st.node_all_connections(n):
-                    t1 = theta_x[n]
-                    t2 = theta_x[connection]
-                    delta -= angular_seperation(t1, t2) / pi
+            l = theta_x[st.node_left[n]]
+            r = theta_x[st.node_right[n]]
 
-                a = -k * delta - b * v[n] ** 2
-                # for spatial_connection in st.node_x(n):
-                #     t1 = theta_x[n]
-                #     t2 = theta_x[spatial_connection]
-                #     delta = angular_seperation(t1, t2) / pi
-                #     a += 0.1 / (delta * len(layer)) ** 2
-            print(a, delta)
-            v[n] += a * dt
-            theta_x_tmp[n] += v[n] * dt
-            theta_x_tmp[n] = theta_x_tmp[n] % (2 * pi)
+            error_l = angular_seperation(new_x_theta, l)
+            error_r = angular_seperation(new_x_theta, r)
+            bounds_sep = angular_seperation(l, r)
+            if is_between(l, r, new_x_theta):
+                v[n] = vel
+                theta_x[n] = new_x_theta % (2 * pi)
 
-        theta_x = theta_x_tmp
-
-    return (theta_x, theta_t)
-
-
-def get_x_avg_coords(st, iterations=100):
-    """returns x and t angles where each nodes edges are treated like spatial springs. I.E. the time-like layers are still regularly seperated but the x-position should minimize the total connection length."""
-    theta_x, theta_t = get_naive_coords(st)
-
-    # for n in st.nodes:
+            # elif abs(error_l) < abs(error_r):
+            #     print(l, r, new_x_theta)
+            #     print(error_l, error_r)
+            #     theta_x[n] = l - error_l / abs(error_l) * bounds_sep / 10.0
+            # elif abs(error_r) < abs(error_l):
+            #     # print(error_l, error_r)
+            #     theta_x[n] = r - error_r / abs(error_r) * bounds_sep / 10.0
 
     return (theta_x, theta_t)
 
-
-def get_smart_coords(st, iterations=100):
-    """returns x and t angles where each nodes edges are treated like spatial springs. I.E. the time-like layers are still regularly seperated but the x-position should minimize the total connection length."""
+    # def get_spring_coords(st, dt=0.015, k=1.0, b=2.0):
     theta_x, theta_t = get_naive_coords(st)
-    theta_x_tmp = theta_x
+
     v = {n: 0 for n in st.nodes}
 
-    # one iteration
-    # random.shuffle
-    for i in range(iterations):
-        print(i)
-        t = 0
-        for layer in st.get_layers():
-            print()
-            print(t)
-            print()
-            t += 1
+    for i in range(500):
+        for n in st.nodes:
+            # print(n)
+            # sums the x length of all connections to n
 
-            for n in layer:
-                delta = 0
-                for connection in st.node_all_connections(n):
-                    t1 = theta_x[n]
-                    t2 = theta_x[connection]
-                    delta += angular_seperation(t1, t2)
-                print(delta)
-                theta_x_tmp[n] += delta / (len(layer) * 10)
-                theta_x_tmp[n] = theta_x_tmp[n] % (2 * pi)
+            dx = sum([angular_seperation(theta_x[n], theta_x[c]) for c in st.node_t(n)])
+            # dxp = sum(
+            #     [angular_seperation(theta_x[n], theta_x[c]) for c in st.node_past[n]]
+            # )
+            # dxf = sum(
+            #     [angular_seperation(theta_x[n], theta_x[c]) for c in st.node_future[n]]
+            # )
 
-        theta_x = theta_x_tmp
+            # for future_node in st.node_future[n]:
+            #     v[future_node] -= dxf * 0.02
+            # for past_node in st.node_past[n]:
+            #     v[past_node] -= dxp * 0.02
+
+            a = k * dx / abs(dx) * abs(dx) ** 0.1
+            a = 0.0
+            for c in st.node_x(n):
+                dx = angular_seperation(theta_x[n], theta_x[c])
+                sign = dx / abs(dx)
+                a -= sign * 0.03 / (dx ** 2)
+            a -= b * v[n]
+            vel = v[n] + a * dt
+            new_x_theta = (theta_x[n] + vel * dt) % (2 * pi)
+
+            l = theta_x[st.node_left[n]]
+            r = theta_x[st.node_right[n]]
+
+            error_l = angular_seperation(new_x_theta, l)
+            error_r = angular_seperation(new_x_theta, r)
+            bounds_sep = angular_seperation(l, r)
+            if is_between(l, r, new_x_theta):
+                v[n] = vel
+                theta_x[n] = new_x_theta
+
+            elif abs(error_l) < abs(error_r):
+                print(l, r, new_x_theta)
+                print(error_l, error_r)
+                theta_x[n] = l - error_l / abs(error_l) * bounds_sep / 10.0
+            elif abs(error_r) < abs(error_l):
+                # print(error_l, error_r)
+                theta_x[n] = r - error_r / abs(error_r) * bounds_sep / 10.0
 
     return (theta_x, theta_t)
 
@@ -240,8 +359,8 @@ def plot_3d_torus(st, shading=None):
             "wireframe": True,
             "wire_width": 100,
             "wire_color": "white",  # Wireframe rendering
-            "width": 300,
-            "height": 300,  # Size of the viewer canvas
+            "width": 1000,
+            "height": 1000,  # Size of the viewer canvas
             "antialias": True,  # Antialising, might not work on all GPUs
             "scale": 2.0,  # Scaling of the model
             "side": "DoubleSide",  # FrontSide, BackSide or DoubleSide rendering of the triangles
@@ -254,7 +373,7 @@ def plot_3d_torus(st, shading=None):
             "point_color": "red",
             "point_size": 0.01,  # Point properties of overlay points
         }
-    theta_x, theta_t = get_naive_coords(st)
+    theta_x, theta_t = get_spring_coords(st)
 
     import numpy as np
     from numpy import sin, cos
@@ -269,17 +388,19 @@ def plot_3d_torus(st, shading=None):
     idx_to_node = {}
     node_to_idx = {}
     coords = {}
+    c = []
     for n in st.nodes:
         idx_to_node[idx] = n
         node_to_idx[n] = idx
         v = theta_x[n]
         u = theta_t[n]
+        c.append((len(st.node_all_connections(n)) - 6))
 
         coords[n] = ((c + a * cos(v)) * cos(u), (c + a * cos(v)) * sin(u), a * sin(v))
         idx += 1
     v = []
     f = []
-    c = []
+    # c = []
     for i in range(idx):
         n = idx_to_node[i]
         v.append(coords[n])
@@ -289,8 +410,6 @@ def plot_3d_torus(st, shading=None):
             n = node
             mapped_face.append(node_to_idx[node])
         f.append(mapped_face)
-
-        c.append([0, 0, st.face_dilaton[face]])
 
     mp.plot(
         np.array(v), np.array(f), c=np.array(c), filename="plots/test", shading=shading
@@ -321,7 +440,7 @@ def plot_3d_cyl(st, shading=None):
             "point_color": "red",
             "point_size": 0.01,  # Point properties of overlay points
         }
-    theta_x, theta_t = get_x_spring_coords(st)
+    theta_x, theta_t = get_spring_coords(st)
 
     import numpy as np
     from numpy import sin, cos
@@ -391,8 +510,7 @@ def plot_3d_cyl(st, shading=None):
 
 
 def plot_2d(st, offeset=0):
-    # theta_x, theta_t = get_smart_coords_old(st)
-    theta_x, theta_t = get_naive_coords(st)
+    theta_x, theta_t = get_naive_layer_shift(st)
     #
     import numpy as np
     from numpy import sin, cos
@@ -514,5 +632,5 @@ def plot_2d(st, offeset=0):
     # plt.legend(
     #     ("nodes", "Triangles", "node connections"), loc="upper right", shadow=True
     # )
-    plt.axis("off")
+    # plt.axis("off")
     plt.show()
