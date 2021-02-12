@@ -1,54 +1,102 @@
-class NodeObject(object):
-    """This is just syntactic sugar to acces node relationships"""
+"""This module defines properties related to nodes in spacetime as well as their manipulation. Most
+non-trivial operations are reserved for the SpaceTime object, and the Node class is largely a syntactic
+sugar for code readability
+"""
+import typing
+from collections import Iterable
 
-    def __init__(self, st, node_id):
-        super(NodeObject, self).__init__()
-        self.st = st
-        self.id = node_id
+PASS_THRU_ATTRS = {
+    # Mapping of attribute name in Node object and corresponding lookup-dict in SpaceTime object
+    # NOTE: this depends on implementation details of SpaceTime class, and should be updated in tandem
+    'left': 'node_left',
+    'right': 'node_right',
+    'past': 'node_past',
+    'future': 'node_future',
+    'faces': 'faces_containing'
+}
+EVENT_RETURNING_ATTRS = ('left', 'right', 'past', 'future')
 
-        if node_id in st.nodes:
-            self.left = st.node_left[self.id]
-            self.right = st.node_right[self.id]
-            self.past = st.node_past[self.id]
-            self.future = st.node_future[self.id]
-            self.faces = st.faces_containing[self.id]
-        else:
-            # print("adding node " + str(self.id))
-            st.nodes.append(self.id)
 
+class Event:
+    """A light-weight representation of a node in a SpaceTime. Since the SpaceTime contains
+    lookup-dicts of all relevant node-edge relationships, the Node class serves as a syntactic
+    sugar for passing between a particular node identifier and various feature lookups in the
+    SpaceTime object.
+    """
+
+    def __init__(self, space_time, event_key):
+        self.space_time = space_time
+        self.key = event_key
+
+    def __eq__(self, other):
+        # TODO add "and other.space_time == self.space_time" once __eq__ defined for SpaceTime
+        return isinstance(other, Event) and other.key == self.key
 
     def __getattr__(self, item):
+        """Override the behavior of attribute lookup ONLY for the case of pass-thru attributes,
+        which are defined above in PASS_THRU_ATTRIBUTES. for these attributes only, the getattr
+        call will be redirected to the underlying SpaceTime object from which the key originates
 
-        attr = {'left': self.node_left[self.id],
-                'right': self.node_right[self.id]}.get(item, None)
-        if attr is None:
-            return self.__dict__.get(item)
+        Args:
+            item:
+                str, the name of the attribute to get
+        """
+        if item in PASS_THRU_ATTRS:
+            value = getattr(self.space_time, PASS_THRU_ATTRS[item])[self.key]
+            if item in EVENT_RETURNING_ATTRS:
+                if isinstance(value, Iterable):
+                    return tuple(Event(space_time=self.space_time, event_key=v) for v in value)
+                return Event(space_time=self.space_time, event_key=value)
+            return value
+        return super(Event, self).__getattr__(item)
+
+    def __repr__(self):
+        """Define convenient representation for events"""
+        # TODO update this to use the SpaceTime repr, now it's just using STN
+        # TODO update this to include a time coordinate if possible
+        return 'Event(ST{:d}, {:d})'.format(len(self.space_time.nodes), self.key)
 
     def __setattr__(self, key, value):
-        {'left': self.node_left}.get(key)[self.id] = value.id if isinstance(value, NodeObject) else value
+        """Override the behavior of attribute setting ONLY for the case of pass-thru attributes,
+        which are defined above in PASS_THRU_ATTRIBUTES. for these attributes only, the setattr
+        call will be redirected to the underlying SpaceTime object from which the key originates
 
-    def set_left(self, val):
-        self.left = val
-        self.st.node_left[self.id] = val
+        Args:
+            key:
+                str, the name of the attribute to set
+            value:
+                Any, if an Event instance and key is a pass-thru attr, value will be coerced to int before
+                assignment to corresponding SpaceTime attribute lookup dict
+        """
+        if key in PASS_THRU_ATTRS:
+            getattr(self.space_time, PASS_THRU_ATTRS[key])[self.key] = event_key(value)
+        return super().__setattr__(key, value)
 
-    def set_right(self, val):
-        self.right = val
-        self.st.node_right[self.id] = val
 
-    def set_past(self, val):
-        self.past = val
-        self.st.node_past[self.id] = val
-        for n in val:
-            if self.id not in self.st.node_future[n]:
-                self.st.node_future[n].append(self.id)
+def event_key(e: typing.Union[Event, int]) -> int:
+    """Small utility function for coercing Event instances to their SpaceTime keys
 
-    def set_future(self, val):
-        self.future = val
-        self.st.node_future[self.id] = val
-        for n in val:
-            if self.id not in self.st.node_past[n]:
-                self.st.node_past[n].append(self.id)
+    Args:
+        e:
+            Event or int, the event to coerce into a key (if necessary)
 
-    def set_faces(self, val):
-        self.faces = val
-        self.st.faces_containing[self.id] = val
+    Returns:
+        int, the coerced event key
+    """
+    return e.key if isinstance(e, Event) else e
+
+
+def events(space_time, keys: typing.Iterable[int]) -> typing.List[Event]:
+    """Helper function for creating multiple Event instances from an iterable
+    of SpaceTime keys
+
+    Args:
+        space_time:
+            SpaceTime, the spacetime from which events will be produced
+        keys:
+            Iterable[int], a collection of SpaceTime keys from which to create Events
+
+    Returns:
+        List[Event], a list of Events corresponding to the order of the given iterable of keys
+    """
+    return [Event(space_time=space_time, event_key=k) for k in keys]
