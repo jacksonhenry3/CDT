@@ -1,4 +1,3 @@
-https://skoch9.github.io/meshplot/tutorial/
-
-matplotlib
-meshplot
+# CDT Tools in Python
+This repo contains various utilities for CDT in 1+1 dimensions. Architecture is currently in flux,
+this README will update when package has stabilized

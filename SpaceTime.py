@@ -2,9 +2,9 @@
 Trying to use node and face NOT vertex and simplex
 """
 
-import Display
 import random
-from NodeObject import NodeObject
+
+from event import Event
 
 
 class SpaceTime(object):
@@ -232,9 +232,9 @@ class SpaceTime(object):
         new_node = self.max_node
 
         # create a node object for easy manipulation. This also automatically adds the node to the sub_space
-        new_node_obj = NodeObject(sub_space, new_node)
-        node_obj = NodeObject(sub_space, node)
-        left_obj = NodeObject(sub_space, node_obj.left)
+        new_node_obj = Event(sub_space, new_node)
+        node_obj = Event(sub_space, node)
+        left_obj = Event(sub_space, node_obj.left)
         left = node_obj.left
         right = node_obj.right
 
@@ -382,26 +382,3 @@ class SpaceTime(object):
                 sub_space.face_dilaton[frozenset(new_face)] = -1
 
         self.push(sub_space)
-
-
-# move fails when this is executed
-FST = SpaceTime()
-size = 16
-FST.generate_flat(size, size)
-random.seed(9230)
-#
-for i in range(1000):
-    if i % 100:
-        print(i)
-    n = FST.get_random_node()
-    f = random.choice(FST.node_future[n])
-    p = random.choice(FST.node_past[n])
-    FST.move(n, f, p)
-    # n = FST.get_random_node()
-    # FST.imove(n)
-
-
-# FST.imove(n)
-print("plottin")
-# Display.get_naive_coords(FST)
-Display.plot_2d(FST)
