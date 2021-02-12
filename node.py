@@ -16,6 +16,17 @@ class NodeObject(object):
             # print("adding node " + str(self.id))
             st.nodes.append(self.id)
 
+
+    def __getattr__(self, item):
+
+        attr = {'left': self.node_left[self.id],
+                'right': self.node_right[self.id]}.get(item, None)
+        if attr is None:
+            return self.__dict__.get(item)
+
+    def __setattr__(self, key, value):
+        {'left': self.node_left}.get(key)[self.id] = value.id if isinstance(value, NodeObject) else value
+
     def set_left(self, val):
         self.left = val
         self.st.node_left[self.id] = val

@@ -4,7 +4,7 @@ Trying to use node and face NOT vertex and simplex
 
 import Display
 import random
-from NodeObject import NodeObject
+from node import NodeObject
 
 
 class SpaceTime(object):
@@ -390,7 +390,7 @@ size = 16
 FST.generate_flat(size, size)
 random.seed(9230)
 #
-for i in range(1000):
+for i in range(10):
     if i % 100:
         print(i)
     n = FST.get_random_node()
