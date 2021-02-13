@@ -15,9 +15,10 @@ def main():
         if i % 100:
             print(i)
         n = FST.get_random_node()
-        f = random.choice(FST.node_future[n])
-        p = random.choice(FST.node_past[n])
+        f = random.choice(n.future)
+        p = random.choice(n.past)
         FST.move(n, f, p)
+        _ = 1
         # n = FST.get_random_node()
         # FST.imove(n)
 
