@@ -4,6 +4,9 @@ Trying to use node and face NOT vertex and simplex
 
 import random
 
+import typing
+
+import event
 from event import Event
 
 
@@ -12,8 +15,9 @@ class SpaceTime(object):
 
     # __slots__ = []
 
-    def __init__(self):
+    def __init__(self, closed: bool = True):
         super(SpaceTime, self).__init__()
+        self.closed = closed
 
         # consider adding curvature here aswell
         self.nodes = []  # nodes is just a list of indicies
@@ -33,16 +37,11 @@ class SpaceTime(object):
 
         # consider inserting using something like this rather than max
         # https://stackoverflow.com/questions/28176866/find-the-smallest-positive-number-not-in-list
-        self.max_node = 0
+        # self.max_node = 0
 
-    def node_x(self, node):
-        return [self.node_left[node], self.node_right[node]]
-
-    def node_t(self, node):
-        return self.node_past[node] + self.node_future[node]
-
-    def node_all_connections(self, node):
-        return self.node_x(node) + self.node_t(node)
+    @property
+    def max_node(self):
+        return max(self.nodes)
 
     def generate_flat(self, space_size, time_size):
         """
@@ -109,10 +108,9 @@ class SpaceTime(object):
 
                 self.faces_containing[index] = [f1, f2, f1_l, f2_l, f1_t, f2_t]
                 index += 1
-        self.max_node = index
 
     def get_random_node(self):
-        return random.choice(self.nodes)
+        return event.Event(self, random.choice(self.nodes))
 
     def get_layers(self, n=False):
         """returns a list of lists where each list contains all nodes in a specific layer, contains all nodes """
@@ -131,45 +129,65 @@ class SpaceTime(object):
                 n = self.node_future[n][0]
         return layers
 
-    # Made redundant by faces_containing dict, remove once fully validated
-    def get_faces_containing(self, n):
-        # get all simplices that contain a particular vertex
-        return {face for face in self.faces if n in face}
+    def add_node(self, n: int = None):
+        """Function for keeping consistency across various lookup dict keys and nodes list"""
+        if n is None:
+            n = self.max_node + 1
+        else:
+            if n in self.nodes:
+                raise ValueError('Cannot add node {:d} to spacetime {}, already exists'.format(n, self))
+        self.nodes.append(n)
+        self.node_left[n] = None
+        self.node_right[n] = None
+        self.node_future[n] = None
+        self.node_past[n] = None
+        self.faces_containing[n] = None
 
-    def pop(self, node_list):
+    def remove_node(self, n: int):
+        """Function for removing node"""
+        n = event.event_key(n)
+        self.nodes.remove(n)
+        self.node_left.pop(n)
+        self.node_right.pop(n)
+        self.node_future.pop(n)
+        self.node_past.pop(n)
+        self.faces_containing.pop(n)
+
+    # Made redundant by faces_containing dict, remove once fully validated
+    def get_faces_containing(self, n: Event):
+        # get all simplices that contain a particular vertex
+        # TODO add "Face" pass-thru abstraction?
+        return {face for face in self.faces if event.event_key(n) in face}
+
+    def pop(self, node_list: typing.List[Event]):
         """
         This creates a new space-time by removing all nodes adjacent to node and returning that sub_space
         """
-        sub_space = SpaceTime()
+        sub_space = SpaceTime(closed=False) # the sub_space will contain references to nodes that do not belong to it (for gluing purposes)
 
         nodes = node_list.copy()
         faces = []
         for node in node_list:
-            nodes.extend(self.node_all_connections(node))
+            nodes.extend(node.neighbors)
             # update this to use the dict instead (requires some work)
             faces.extend(self.get_faces_containing(node))
         faces = list(set(faces))
         nodes = list(set(nodes))
-        # remove all nodes from self
-        for n in nodes:
-            self.nodes.remove(n)
         self.dead_refrences = nodes.copy()  # i.e these nodes are no longer in the st
 
-        # remove all faces that contain anything in node_list
-        for f in faces:
-            self.faces.remove(f)
-
         # set the sub_space nodes and faces
-        sub_space.nodes = nodes.copy()
+        sub_space.nodes = [event.event_key(n) for n in nodes]
         sub_space.faces = faces.copy()
 
         # loop through all removed nodes and remove their properties from self and add them to sub_space
-        for n in sub_space.nodes:
-            sub_space.node_left[n] = self.node_left.pop(n)
-            sub_space.node_right[n] = self.node_right.pop(n)
-            sub_space.node_past[n] = self.node_past.pop(n)
-            sub_space.node_future[n] = self.node_future.pop(n)
-            sub_space.faces_containing[n] = self.faces_containing.pop(n)
+        # taking care to label gluing points (references to nodes that do not belong to sub_space)
+        coerce = lambda keys: event.coerce_gluing_point(sub_space, keys)
+        for n_s, n in event.events([sub_space, self], sub_space.nodes):
+            n_s.left = coerce(n.left)
+            n_s.right = coerce(n.right)
+            n_s.past = coerce(n.past)
+            n_s.future = coerce(n.future)
+            n_s.faces = n.faces
 
         # loop through all removed faces and remove their properties from self and add them to sub_space
         for f in sub_space.faces:
@@ -178,6 +196,13 @@ class SpaceTime(object):
             # sub_space.face_t[f] = self.face_t.pop(f)
 
         # dont forget to set sub_space dead refrences
+        for n in sub_space.nodes:
+            self.remove_node(n)
+
+        # remove all faces that contain anything in node_list
+        for f in faces:
+            self.faces.remove(f)
+
         return sub_space
 
     def push(self, sub_space):
@@ -198,14 +223,14 @@ class SpaceTime(object):
         faces = sub_space.faces
 
         for n in nodes:
-            self.nodes.append(n)
+            self.add_node(n)
 
-        for n in nodes:
-            self.node_left[n] = sub_space.node_left[n]
-            self.node_right[n] = sub_space.node_right[n]
-            self.node_past[n] = sub_space.node_past[n]
-            self.node_future[n] = sub_space.node_future[n]
-            self.faces_containing[n] = sub_space.faces_containing[n]
+        for n, n_s in zip(event.events(self, nodes), event.events(sub_space, nodes)):
+            n.left = n_s.left
+            n.right = n_s.right
+            n.past = n_s.past
+            n.future = n_s.future
+            n.faces = n_s.faces
 
         for f in faces:
             self.faces.append(f)
@@ -226,115 +251,117 @@ class SpaceTime(object):
 
         # remove the sub_space that is going to be modified
         sub_space = self.pop([node])
+        future_s = Event(sub_space, future) # Need these two because they have been "popped" out of the original spacetime
+        past_s = Event(sub_space, past)
 
         # increment the total node counter
-        self.max_node += 1
-        new_node = self.max_node
+        sub_space.add_node(self.max_node + 1)
 
         # create a node object for easy manipulation. This also automatically adds the node to the sub_space
-        new_node_obj = Event(sub_space, new_node)
-        node_obj = Event(sub_space, node)
-        left_obj = Event(sub_space, node_obj.left)
-        left = node_obj.left
-        right = node_obj.right
+        new_s = Event(sub_space, self.max_node + 1)
+        node_s = Event(sub_space, node)
+        left_s = Event(sub_space, node_s.left)
+        left = node_s.left
+        right = node_s.right
 
         # spatial changes.
-        node_obj.set_left(new_node)
-        new_node_obj.set_right(node)
-        new_node_obj.set_left(left)
-        left_obj.set_right(new_node)
+        node_s.left = new_s
+        new_s.right = node_s
+        new_s.left = left
+        left_s.right = new_s
 
         # future changes
-        new_future_set = [future]
-        f = sub_space.node_left[future]
+        # TODO examine algorithm concept of connection vs Spacetime (e.g. after popping a node out, what does asking for "left" mean?)
+        new_future_set = [future_s]
+        f = future_s.left
 
-        while f in node_obj.future:
+        while f in node_s.future and not f.is_gluing_point:
             new_future_set.append(f)
-            sub_space.node_future[node].remove(f)
-            sub_space.node_past[f].remove(node)
-            f = sub_space.node_left[f]
-        new_node_obj.set_future(list(set(new_future_set)))
+            sub_space.node_future[event.event_key(node)].remove(event.event_key(f)) # TODO cleanup the event key coercion by figuring out workaround for node.future.remove()
+            sub_space.node_past[event.event_key(f)].remove(event.event_key(node))
+            f = f.left
+        new_s.future = list(set(new_future_set))
         old_future_set = list(
-            set(sub_space.node_future[node]) - set(new_future_set)
-        ) + [future]
-        node_obj.set_future(old_future_set)
+            set(node_s.future) - set(new_future_set)
+        ) + [future_s]
+        node_s.future = old_future_set
         # sub_space.node_past[future].append(new_node)
 
         # past changes
-        new_past_set = [past]
-        p = sub_space.node_left[past]
-        while p in node_obj.past:
+        new_past_set = [past_s]
+        p = past_s.left
+        while p in node_s.past:
             new_past_set.append(p)
-            sub_space.node_past[node].remove(p)
-            sub_space.node_future[p].remove(node)
-            p = sub_space.node_left[p]
+            sub_space.node_past[event.event_key(node_s)].remove(event.event_key(p))
+            sub_space.node_future[event.event_key(p)].remove(event.event_key(node_s))
+            p = p.left
 
-        new_node_obj.set_past(new_past_set)
-        old_past_set = list(set(sub_space.node_past[node]) - set(new_past_set)) + [past]
-        node_obj.set_past(old_past_set)
+        new_s.past = new_past_set
+        old_past_set = list(set(node_s.past) - set(new_past_set)) + [past_s]
+        node_s.past = old_past_set
         # sub_space.node_future[past].append(new_node)
 
         # face changes
         # remove old faces
         sub_space.faces = []
 
-        n = future
+        n = future_s
         leftmost_future = n
-        while sub_space.node_left[n] in new_node_obj.future:
+        while n.left in new_s.future:
             v1 = n
-            n = sub_space.node_left[n]
+            n = n.left
             leftmost_future = n
-            new_face = frozenset([v1, n, new_node])
+            new_face = frozenset([v1.key, n.key, new_s.key])
             sub_space.faces.append(new_face)
             sub_space.face_dilaton[new_face] = -1
-        n = past
+        n = past_s
         leftmost_past = n
-        while sub_space.node_left[n] in new_node_obj.past:
+        while n.left in new_s.past:
             v1 = n
-            n = sub_space.node_left[n]
+            n = n.left
             leftmost_past = n
-            new_face = frozenset([v1, n, new_node])
+            new_face = frozenset([v1.key, n.key, new_s.key])
             sub_space.faces.append(new_face)
             sub_space.face_dilaton[new_face] = 100
 
-        n = future
+        n = future_s
         rightmost_future = n
-        while sub_space.node_right[n] in node_obj.future:
+        while n.right in node_s.future:
             v1 = n
             n = sub_space.node_right[n]
             rightmost_future = n
-            new_face = frozenset([v1, n, node])
+            new_face = frozenset([v1.key, n.key, node_s.key])
             sub_space.faces.append(new_face)
             sub_space.face_dilaton[new_face] = -1
-        n = past
+        n = past_s
         rightmost_past = n
-        while sub_space.node_right[n] in node_obj.past:
+        while n.right in node_s.past:
             v1 = n
-            n = sub_space.node_right[n]
+            n = n.right
             rightmost_past = n
-            new_face = frozenset([v1, n, node])
+            new_face = frozenset([v1.key, n.key, node_s.key])
             sub_space.faces.append(new_face)
             sub_space.face_dilaton[new_face] = 100
 
-        righmost_future = future
+        righmost_future = future_s
 
-        sub_space.faces.append(frozenset({node, new_node, future}))
-        sub_space.face_dilaton[frozenset({node, new_node, future})] = 1
-        sub_space.faces.append(frozenset({node, new_node, past}))
-        sub_space.face_dilaton[frozenset({node, new_node, past})] = -1
+        sub_space.faces.append(frozenset({node_s.key, new_s.key, future_s.key}))
+        sub_space.face_dilaton[frozenset({node_s.key, new_s.key, future_s.key})] = 1
+        sub_space.faces.append(frozenset({node_s.key, new_s.key, past_s.key}))
+        sub_space.face_dilaton[frozenset({node_s.key, new_s.key, past_s.key})] = -1
 
-        sub_space.faces.append(frozenset({node, right, rightmost_future}))
-        sub_space.face_dilaton[frozenset({node, right, rightmost_future})] = 1
-        sub_space.faces.append(frozenset({node, right, rightmost_past}))
-        sub_space.face_dilaton[frozenset({node, right, rightmost_past})] = -1
+        sub_space.faces.append(frozenset({node_s.key, right.key, rightmost_future.key}))
+        sub_space.face_dilaton[frozenset({node_s.key, right.key, rightmost_future.key})] = 1
+        sub_space.faces.append(frozenset({node_s.key, right.key, rightmost_past.key}))
+        sub_space.face_dilaton[frozenset({node_s.key, right.key, rightmost_past.key})] = -1
 
-        sub_space.faces.append(frozenset({left, new_node, leftmost_future}))
-        sub_space.face_dilaton[frozenset({left, new_node, leftmost_future})] = 1
-        sub_space.faces.append(frozenset({left, new_node, leftmost_past}))
-        sub_space.face_dilaton[frozenset({left, new_node, leftmost_past})] = -1
+        sub_space.faces.append(frozenset({left.key, new_s.key, leftmost_future.key}))
+        sub_space.face_dilaton[frozenset({left.key, new_s.key, leftmost_future.key})] = 1
+        sub_space.faces.append(frozenset({left.key, new_s.key, leftmost_past.key}))
+        sub_space.face_dilaton[frozenset({left.key, new_s.key, leftmost_past.key})] = -1
 
-        new_node_obj.set_faces([])
-        node_obj.set_faces([])
+        new_s.faces = []
+        node_s.faces = []
         self.push(sub_space)
 
     def imove(self, node):

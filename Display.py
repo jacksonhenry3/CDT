@@ -6,6 +6,9 @@ import math
 import random
 
 # utility functions
+import event
+
+
 def angular_seperation(theta_1, theta_2):
     res = -(((theta_1 - theta_2) + pi) % (2 * pi) - pi)
     if math.isnan(res):
@@ -186,11 +189,11 @@ def get_naive_layer_shift(st, theta_x=False, theta_t=False):
     for t, layer in enumerate(layers[1:]):
         t += 1
         offset = 0
-        for n in layer:
+        for n in event.events(st, layer):
             d_offset = sum(
                 [
-                    angular_seperation(theta_x[n], theta_x[c]) / len(layer)
-                    for c in st.node_past[n]
+                    angular_seperation(theta_x[n.key], theta_x[c.key]) / len(layer)
+                    for c in n.past
                 ]
             )
             print(d_offset)
@@ -262,28 +265,28 @@ def get_spring_coords(st, dt=0.015, k=1.0, b=2.0):
     v = {n: 0 for n in st.nodes}
 
     for i in range(500):
-        for n in st.nodes:
+        for n in event.events(st, st.nodes):
             # print(n)
             # sums the x length of all connections to n
-            dx = sum([angular_seperation(theta_x[n], theta_x[c]) for c in st.node_t(n)])
+            dx = sum([angular_seperation(theta_x[n.key], theta_x[c.key]) for c in n.temporal_neighbors])
             a = k * dx
-            for c in st.node_x(n):
-                dx = angular_seperation(theta_x[n], theta_x[c])
+            for c in n.spatial_neighbors:
+                dx = angular_seperation(theta_x[n.key], theta_x[c.key])
                 sign = dx / abs(dx)
                 a -= sign * 0.07 / (dx ** 2)
-            a -= b * v[n]
-            vel = v[n] + a * dt
-            new_x_theta = (theta_x[n] + vel * dt) % (2 * pi)
+            a -= b * v[n.key]
+            vel = v[n.key] + a * dt
+            new_x_theta = (theta_x[n.key] + vel * dt) % (2 * pi)
 
-            l = theta_x[st.node_left[n]]
-            r = theta_x[st.node_right[n]]
+            l = theta_x[n.left.key]
+            r = theta_x[n.right.key]
 
             error_l = angular_seperation(new_x_theta, l)
             error_r = angular_seperation(new_x_theta, r)
             bounds_sep = angular_seperation(l, r)
             if is_between(l, r, new_x_theta):
                 v[n] = vel
-                theta_x[n] = new_x_theta % (2 * pi)
+                theta_x[n.key] = new_x_theta % (2 * pi)
 
             # elif abs(error_l) < abs(error_r):
             #     print(l, r, new_x_theta)
@@ -305,7 +308,7 @@ def get_spring_coords(st, dt=0.015, k=1.0, b=2.0):
             # print(n)
             # sums the x length of all connections to n
 
-            dx = sum([angular_seperation(theta_x[n], theta_x[c]) for c in st.node_t(n)])
+            dx = sum([angular_seperation(theta_x[n], theta_x[c]) for c in n.temporal_neighbors])
             # dxp = sum(
             #     [angular_seperation(theta_x[n], theta_x[c]) for c in st.node_past[n]]
             # )
@@ -320,7 +323,7 @@ def get_spring_coords(st, dt=0.015, k=1.0, b=2.0):
 
             a = k * dx / abs(dx) * abs(dx) ** 0.1
             a = 0.0
-            for c in st.node_x(n):
+            for c in n.spatial_neighbors:
                 dx = angular_seperation(theta_x[n], theta_x[c])
                 sign = dx / abs(dx)
                 a -= sign * 0.03 / (dx ** 2)
@@ -328,8 +331,8 @@ def get_spring_coords(st, dt=0.015, k=1.0, b=2.0):
             vel = v[n] + a * dt
             new_x_theta = (theta_x[n] + vel * dt) % (2 * pi)
 
-            l = theta_x[st.node_left[n]]
-            r = theta_x[st.node_right[n]]
+            l = theta_x[n.left]
+            r = theta_x[n.right]
 
             error_l = angular_seperation(new_x_theta, l)
             error_r = angular_seperation(new_x_theta, r)
@@ -525,18 +528,18 @@ def plot_2d(st, offeset=0):
     node_to_idx = {}
     coords = {}
     colors = []
-    for n in st.nodes:
-        idx_to_node[idx] = n
-        node_to_idx[n] = idx
-        v = theta_x[n]
-        u = theta_t[n]
+    for n in event.events(st, st.nodes):
+        idx_to_node[idx] = n.key
+        node_to_idx[n.key] = idx
+        v = theta_x[n.key]
+        u = theta_t[n.key]
 
-        coords[n] = (
+        coords[n.key] = (
             v,
             u,
         )
 
-        colors.append((len(st.node_all_connections(n)) - 6))
+        colors.append((len(n.neighbors) - 6))
         idx += 1
 
     x = [coords[n][0] for n in st.nodes]
@@ -567,36 +570,36 @@ def plot_2d(st, offeset=0):
     edges_space_pointing = []
     import itertools
 
-    for node in st.nodes:
+    for e in event.events(st, st.nodes):
         past_asj = None
-        for adjacent in st.node_past[node]:
+        for adjacent in e.past:
             if past_asj == adjacent:
                 print(adjacent)
             past_asj = adjacent
-            if abs(theta_t[node] - theta_t[adjacent]) < pi:
-                if abs(theta_x[node] - theta_x[adjacent]) < pi:
+            if abs(theta_t[e.key] - theta_t[adjacent.key]) < pi:
+                if abs(theta_x[e.key] - theta_x[adjacent.key]) < pi:
                     edges_past_pointing.append(
                         [
-                            coords[node] + np.array([offeset, offeset]),
-                            coords[adjacent] + np.array([offeset, offeset]),
+                            coords[e.key] + np.array([offeset, offeset]),
+                            coords[adjacent.key] + np.array([offeset, offeset]),
                         ]
                     )
-        for adjacent in st.node_future[node]:
-            if abs(theta_t[node] - theta_t[adjacent]) < pi:
-                if abs(theta_x[node] - theta_x[adjacent]) < pi:
+        for adjacent in e.future:
+            if abs(theta_t[e.key] - theta_t[adjacent.key]) < pi:
+                if abs(theta_x[e.key] - theta_x[adjacent.key]) < pi:
                     edges_future_pointing.append(
                         [
-                            coords[node] + np.array([offeset, offeset]),
-                            coords[adjacent] + np.array([offeset, offeset]),
+                            coords[e.key] + np.array([offeset, offeset]),
+                            coords[adjacent.key] + np.array([offeset, offeset]),
                         ]
                     )
-        for adjacent in st.node_x(node):
-            if abs(theta_t[node] - theta_t[adjacent]) < pi:
-                if abs(theta_x[node] - theta_x[adjacent]) < pi:
+        for adjacent in e.spatial_neighbors:
+            if abs(theta_t[e.key] - theta_t[adjacent.key]) < pi:
+                if abs(theta_x[e.key] - theta_x[adjacent.key]) < pi:
                     edges_space_pointing.append(
                         [
-                            coords[node] + np.array([offeset, offeset]),
-                            coords[adjacent] + np.array([offeset, offeset]),
+                            coords[e.key] + np.array([offeset, offeset]),
+                            coords[adjacent.key] + np.array([offeset, offeset]),
                         ]
                     )
 
