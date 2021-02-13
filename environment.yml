@@ -1,0 +1,12 @@
+name: cdtea-env
+
+channels:
+  - conda-forge
+  - defaults
+
+dependencies:
+  - numpy
+  - matplotlib
+  - meshplot
+  - pytest
+  - python=3.8
