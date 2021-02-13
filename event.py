@@ -24,8 +24,14 @@ class Event:
     SpaceTime object.
     """
 
-    def __init__(self, space_time, event_key):
+    def __init__(self, space_time, event_key, ):
         self.space_time = space_time
+        if isinstance(event_key, Event):
+            # TODO check space_time equivalence
+            event_key = event_key.key
+        # Check that event exists in space_time (consistency)
+        if space_time.closed and event_key not in space_time.nodes:
+            raise ValueError('Event Key {:d} not defined in spacetime: {}'.format(event_key, space_time))
         self.key = event_key
 
     def __eq__(self, other):
@@ -45,10 +51,19 @@ class Event:
             value = getattr(self.space_time, PASS_THRU_ATTRS[item])[self.key]
             if item in EVENT_RETURNING_ATTRS:
                 if isinstance(value, Iterable):
-                    return tuple(Event(space_time=self.space_time, event_key=v) for v in value)
+                    return [Event(space_time=self.space_time, event_key=v) for v in value]
                 return Event(space_time=self.space_time, event_key=value)
             return value
-        return super(Event, self).__getattr__(item)
+        return super(Event, self).__getattribute__(item)
+
+    def __hash__(self):
+        """Make Event hashable
+
+        Returns:
+
+        """
+        # TODO add spacetime hash
+        return hash(('Event', self.key))
 
     def __repr__(self):
         """Define convenient representation for events"""
@@ -69,8 +84,25 @@ class Event:
                 assignment to corresponding SpaceTime attribute lookup dict
         """
         if key in PASS_THRU_ATTRS:
-            getattr(self.space_time, PASS_THRU_ATTRS[key])[self.key] = event_key(value)
+            value = [event_key(v) for v in value] if isinstance(value, Iterable) else event_key(value)
+            getattr(self.space_time, PASS_THRU_ATTRS[key])[self.key] = value
         return super().__setattr__(key, value)
+
+    @property
+    def spatial_neighbors(self):
+        return [self.left, self.right]
+
+    @property
+    def temporal_neighbors(self):
+        return self.past + self.future
+
+    @property
+    def neighbors(self):
+        return self.spatial_neighbors + self.temporal_neighbors
+
+    @property
+    def is_gluing_point(self):
+        return isinstance(self.key, GluingPoint)
 
 
 def event_key(e: typing.Union[Event, int]) -> int:
@@ -86,7 +118,7 @@ def event_key(e: typing.Union[Event, int]) -> int:
     return e.key if isinstance(e, Event) else e
 
 
-def events(space_time, keys: typing.Iterable[int]) -> typing.List[Event]:
+def events(space_time, keys: typing.Union[int, typing.Iterable[int]]) -> typing.Union[Event, typing.List[Event]]:
     """Helper function for creating multiple Event instances from an iterable
     of SpaceTime keys
 
@@ -99,4 +131,24 @@ def events(space_time, keys: typing.Iterable[int]) -> typing.List[Event]:
     Returns:
         List[Event], a list of Events corresponding to the order of the given iterable of keys
     """
-    return [Event(space_time=space_time, event_key=k) for k in keys]
+    if isinstance(space_time, Iterable): # TODO more thorough check in case we make spacetime iterable..
+        return zip(*[events(st, keys) for st in space_time])
+    if isinstance(keys, Iterable):
+        return [Event(space_time=space_time, event_key=k) for k in keys]
+    return Event(space_time=space_time, event_key=keys)
+
+
+
+# Some sketch of gluing tools
+
+class GluingPoint(int):
+    pass
+
+
+def coerce_gluing_point(space_time, event: typing.Union[Event, typing.Iterable[Event]]):
+    # Naive
+    if isinstance(event, Iterable):
+        return [coerce_gluing_point(space_time, v) for v in event]
+    if event.key not in space_time.nodes:
+        return Event(space_time, event_key=GluingPoint(event.key))
+    return event
