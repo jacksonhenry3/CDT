@@ -2,6 +2,7 @@
 non-trivial operations are reserved for the SpaceTime object, and the Node class is largely a syntactic
 sugar for code readability
 """
+
 import typing
 from collections import Iterable
 
@@ -131,12 +132,11 @@ def events(space_time, keys: typing.Union[int, typing.Iterable[int]]) -> typing.
     Returns:
         List[Event], a list of Events corresponding to the order of the given iterable of keys
     """
-    if isinstance(space_time, Iterable): # TODO more thorough check in case we make spacetime iterable..
+    if isinstance(space_time, Iterable):  # TODO more thorough check in case we make spacetime iterable..
         return zip(*[events(st, keys) for st in space_time])
     if isinstance(keys, Iterable):
         return [Event(space_time=space_time, event_key=k) for k in keys]
     return Event(space_time=space_time, event_key=keys)
-
 
 
 # Some sketch of gluing tools

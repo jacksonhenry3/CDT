@@ -6,8 +6,8 @@ import random
 
 import typing
 
-import event
-from event import Event
+from cdtea import event
+from cdtea.event import Event
 
 
 class SpaceTime(object):

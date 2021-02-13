@@ -1,7 +1,7 @@
 import random
 
-import Display
-from SpaceTime import SpaceTime
+from cdtea import Display
+from cdtea.SpaceTime import SpaceTime
 
 
 def main():

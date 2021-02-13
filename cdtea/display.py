@@ -1,12 +1,9 @@
 import numpy as np
-from numpy import arctan2, cos, sin, exp
 from math import pi
-import matplotlib.pyplot as plt
 import math
-import random
 
 # utility functions
-import event
+from cdtea import event
 
 
 def angular_seperation(theta_1, theta_2):
@@ -381,7 +378,6 @@ def plot_3d_torus(st, shading=None):
     import numpy as np
     from numpy import sin, cos
     import meshplot as mp
-    import random
 
     mp.offline()
 
@@ -448,7 +444,6 @@ def plot_3d_cyl(st, shading=None):
     import numpy as np
     from numpy import sin, cos
     import meshplot as mp
-    import random
 
     mp.offline()
 
@@ -516,10 +511,8 @@ def plot_2d(st, offeset=0):
     theta_x, theta_t = get_naive_layer_shift(st)
     #
     import numpy as np
-    from numpy import sin, cos
     import matplotlib.pyplot as plt
     from matplotlib.collections import LineCollection
-    import random
 
     c = 3
     a = 1
@@ -568,7 +561,6 @@ def plot_2d(st, offeset=0):
     edges_past_pointing = []
     edges_future_pointing = []
     edges_space_pointing = []
-    import itertools
 
     for e in event.events(st, st.nodes):
         past_asj = None
