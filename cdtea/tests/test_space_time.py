@@ -1,6 +1,6 @@
 """Unittests for SpaceTime"""
 
-from SpaceTime import SpaceTime
+from cdtea.SpaceTime import SpaceTime
 
 
 def dummy_space_time(spatial_size: int = 2, temporal_size: int = 1):

@@ -1,7 +1,7 @@
 """Unittests for the Event class
 """
-import event
-from SpaceTime import SpaceTime
+from cdtea import event
+from cdtea.SpaceTime import SpaceTime
 from tests import test_space_time
 
 
