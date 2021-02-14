@@ -508,7 +508,7 @@ def plot_3d_cyl(st, shading=None):
 
 
 def plot_2d(st, offeset=0):
-    theta_x, theta_t = get_naive_layer_shift(st)
+    theta_x, theta_t = get_naive_coords(st)
     #
     import numpy as np
     import matplotlib.pyplot as plt
@@ -532,7 +532,7 @@ def plot_2d(st, offeset=0):
             u,
         )
 
-        colors.append((len(n.neighbors) - 6))
+        # colors.append((len(n.neighbors) - 6))
         idx += 1
 
     x = [coords[n][0] for n in st.nodes]
@@ -542,19 +542,19 @@ def plot_2d(st, offeset=0):
 
     import itertools
 
-    for face in st.faces:
-        for pair in itertools.combinations(face, 2):
-            n1 = pair[0]
-            n2 = pair[1]
-            # doesnt add triangles that span the inside of the cyl
-            if abs(theta_t[n1] - theta_t[n2]) < pi:
-                if abs(theta_x[n1] - theta_x[n2]) < pi:
-                    edges1.append(
-                        [
-                            coords[n1] - np.array([offeset, offeset]),
-                            coords[n2] - np.array([offeset, offeset]),
-                        ]
-                    )
+    # for face in st.faces:
+    #     for pair in itertools.combinations(face, 2):
+    #         n1 = pair[0]
+    #         n2 = pair[1]
+    #         # doesnt add triangles that span the inside of the cyl
+    #         if abs(theta_t[n1] - theta_t[n2]) < pi:
+    #             if abs(theta_x[n1] - theta_x[n2]) < pi:
+    #                 edges1.append(
+    #                     [
+    #                         coords[n1] - np.array([offeset, offeset]),
+    #                         coords[n2] - np.array([offeset, offeset]),
+    #                     ]
+    #                 )
 
     edges2 = []
 
