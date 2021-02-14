@@ -5,7 +5,7 @@ from cdtea.space_time import SpaceTime
 
 
 def main():
-    # move fails when this is executed
+
     FST = SpaceTime()
     size = 16
     FST.generate_flat(size, size)
