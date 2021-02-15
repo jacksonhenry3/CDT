@@ -48,7 +48,7 @@ class Event:
             event_key = event_key.key
         # Check that event exists in space_time (consistency)
         if space_time.closed and event_key not in space_time.nodes:
-            raise ValueError('Event Key {:d} not defined in spacetime: {}'.format(event_key, space_time))
+            raise ValueError('Event Key {} not defined in spacetime: {}'.format(event_key, space_time))
         self.key = event_key
 
     def __eq__(self, other):
@@ -77,8 +77,8 @@ class Event:
             value = getattr(self.space_time, PASS_THRU_ATTRS[item])[self.key]
             if item in EVENT_RETURNING_ATTRS:
                 if isinstance(value, Iterable):
-                    return [Event(space_time=self.space_time, event_key=v) for v in value]
-                return Event(space_time=self.space_time, event_key=value)
+                    return [v if v is None else Event(space_time=self.space_time, event_key=v) for v in value]
+                return value if value is None else Event(space_time=self.space_time, event_key=value)
             return value
         return super(Event, self).__getattribute__(item)
 
@@ -95,7 +95,7 @@ class Event:
         """Define convenient representation for events"""
         # TODO update this to use the SpaceTime repr, now it's just using STN
         # TODO update this to include a time coordinate if possible
-        return 'Event(ST{:d}, {:d})'.format(len(self.space_time.nodes), self.key)
+        return 'Event(ST{:d}, {:d})'.format(len(self.space_time.nodes), -1 if self.key is None else self.key)
 
     def __setattr__(self, key, value):
         """Override the behavior of attribute setting ONLY for the case of pass-thru attributes,
@@ -130,6 +130,14 @@ class Event:
         value_key = [event_key(v) for v in value] if isinstance(value, Iterable) else event_key(value)
         original_value = getattr(self, key)
         getattr(self.space_time, PASS_THRU_ATTRS[key])[self.key] = value_key
+
+        if original_value is None or original_value == []:
+            # Short-circuit if the original value is None (this corresponds to a empty-reference)
+            return
+
+        if key not in EDGE_CONSISTENCY_ATTR_DUALS:
+            # TODO define behavior for faces and face consistency
+            return
 
         # Curate remaining values for edge-consistency
         if isinstance(value, Iterable):
@@ -218,7 +226,7 @@ def events(space_time, keys: typing.Union[int, typing.Iterable[int]]) -> typing.
         List[Event], a list of Events corresponding to the order of the given iterable of keys
     """
     if isinstance(space_time, Iterable):  # TODO more thorough check in case we make spacetime iterable..
-        return zip(*[events(st, keys) for st in space_time])
+        return list(zip(*[events(st, keys) for st in space_time]))
     if isinstance(keys, Iterable):
         return [Event(space_time=space_time, event_key=k) for k in keys]
     return Event(space_time=space_time, event_key=keys)
