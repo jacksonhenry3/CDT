@@ -1,5 +1,5 @@
 """Unittests for SpaceTime"""
-
+from cdtea import event
 from cdtea.space_time import SpaceTime
 
 
@@ -11,11 +11,34 @@ def dummy_space_time(spatial_size: int = 2, temporal_size: int = 1):
 
 
 class TestSpaceTime:
+    """Test SpaceTime classes"""
+
     def test_dummy_space_time(self):
         """Coverage ftw"""
         dst = dummy_space_time()
         assert isinstance(dst, SpaceTime)
         assert len(dst.nodes) == 2
+
+    def test_pop(self):
+        dst = dummy_space_time(3, 3)
+        e0 = event.Event(dst, 0)
+        dst2 = dst.pop([e0])
+        assert isinstance(dst2, SpaceTime)
+
+    def test_push(self):
+        dst = dummy_space_time(3, 3)
+        e0 = event.Event(dst, 0)
+        dst2 = dst.pop([e0])
+        dst.push(dst2)
+        # TODO add real equivalence check
+        assert isinstance(dst, SpaceTime)
+
+    def test_move(self):
+        dst = dummy_space_time(3, 3)
+        n, f, p = event.events(dst, [4, 7, 1])
+        dst.move(n, f, p)
+        assert isinstance(dst, SpaceTime)
+
 
 # Original Testing Code Below (commented out until migrated into unittests)
 # this checks if in a flat space-time each node belongs to 6 simplices
