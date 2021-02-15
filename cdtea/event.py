@@ -25,7 +25,15 @@ class Event:
     SpaceTime object.
     """
 
-    def __init__(self, space_time, event_key, ):
+    def __init__(self, space_time, event_key):
+        """Create an Event isntance
+
+        Args:
+            space_time:
+                SpaceTime, the spacetime object
+            event_key:
+                int, the Event label
+        """
         self.space_time = space_time
         if isinstance(event_key, Event):
             # TODO check space_time equivalence
@@ -36,6 +44,15 @@ class Event:
         self.key = event_key
 
     def __eq__(self, other):
+        """Equality comparison operator
+
+        Args:
+            other:
+                Any, if an Event instance compare for equality
+
+        Returns:
+            bool, True if equivalent events, False otherwise
+        """
         # TODO add "and other.space_time == self.space_time" once __eq__ defined for SpaceTime
         return isinstance(other, Event) and other.key == self.key
 
@@ -61,7 +78,7 @@ class Event:
         """Make Event hashable
 
         Returns:
-
+            int, the has value of the Event
         """
         # TODO add spacetime hash
         return hash(('Event', self.key))
@@ -91,18 +108,38 @@ class Event:
 
     @property
     def spatial_neighbors(self):
+        """Spatial Neighbors are those that are connected to this event via space-like edges
+
+        Returns:
+            List[Event], the left and right neighbors
+        """
         return [self.left, self.right]
 
     @property
     def temporal_neighbors(self):
+        """Temporal neighbors are those that are connected to this event via time-like edges
+
+        Returns:
+            List[Event], the past and future neighbors
+        """
         return self.past + self.future
 
     @property
     def neighbors(self):
+        """All neighbors, events connected to this event via any kind of edge
+
+        Returns:
+            List[Event], all neighbor events
+        """
         return self.spatial_neighbors + self.temporal_neighbors
 
     @property
     def is_gluing_point(self):
+        """Boolean variable for determining gluing points
+
+        Returns:
+            bool, True if this event represents a gluing point, False otherwise.
+        """
         return isinstance(self.key, GluingPoint)
 
 
@@ -139,16 +176,34 @@ def events(space_time, keys: typing.Union[int, typing.Iterable[int]]) -> typing.
     return Event(space_time=space_time, event_key=keys)
 
 
-# Some sketch of gluing tools
-
 class GluingPoint(int):
-    pass
+    """A Gluing Point represents a reference to an "open edge" or an event that
+    does not belong to a particular spacetime. They are used for gluing spacetimes
+    together, which primarily arises as a functional inverse to removing a subset of
+    events from a spacetime (or 'cutting'). The terminology of cutting / gluing is
+    borrowed from topological literature.
+
+    The Gluing Point int subclass is used to passively identify gluing points
+    as event keys without changing and fundamental behavior of the event key.
+    """
 
 
 def coerce_gluing_point(space_time, event: typing.Union[Event, typing.Iterable[Event]]):
+    """Coerce event key to GluingPoints if the event does not belong to the space_time
+
+    Args:
+        space_time:
+            SpaceTime, the spacetime object
+        event:
+            Event, the event to coerce. key will be wrapped as GluingPoint if event
+            does not belong the space_time argument
+
+    Returns:
+        Event or List[Event], the coerced events
+    """
     # Naive
     if isinstance(event, Iterable):
         return [coerce_gluing_point(space_time, v) for v in event]
     if event.key not in space_time.nodes:
-        return Event(space_time, event_key=GluingPoint(event.key))
+        return Event(event.space_time, event_key=GluingPoint(event.key))
     return event
