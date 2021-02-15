@@ -38,8 +38,8 @@ class TestEvent:
         e0, e1, e2, e3 = event.events(dst, range(4))
         assert e0.right == e1
         assert e1.left == e0
-        assert e0.future == (e2, e3)
-        assert e3.past == (e0, e1)
+        assert e0.future == [e2, e3]
+        assert e3.past == [e0, e1]
 
     def test_event_safe_getattr(self):
         dst = test_space_time.dummy_space_time()
@@ -65,8 +65,9 @@ class TestEventUtilities:
 
     def test_event_key(self):
         """Test event_key coercion function"""
-        e = event.Event(None, 0)
-        assert event.event_key(e) == 0
+        dst = test_space_time.dummy_space_time()
+        e0, _ = event.events(dst, [0, 1])
+        assert event.event_key(e0) == 0
         assert event.event_key(0) == 0
 
     def test_events(self):
