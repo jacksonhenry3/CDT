@@ -16,6 +16,14 @@ PASS_THRU_ATTRS = {
     'faces': 'faces_containing'
 }
 EVENT_RETURNING_ATTRS = ('left', 'right', 'past', 'future')
+EDGE_CONSISTENCY_ATTR_DUALS = {
+    # Mapping of attributes that define edge consistency relationships, which
+    # may also be viewed as parity and time-reversal duals
+    'left': 'right',
+    'right': 'left',
+    'past': 'future',
+    'future': 'past',
+}
 
 
 class Event:
@@ -100,11 +108,51 @@ class Event:
             value:
                 Any, if an Event instance and key is a pass-thru attr, value will be coerced to int before
                 assignment to corresponding SpaceTime attribute lookup dict
+
+        Notes:
+            Edge Consistency:
+                The below code ensures that both ends of edges are maintained in a way that
+                preserves the following consistency relations between events A and B:
+
+                    (1) A.right = B    <==>  A = B.left
+                    (2) A.left = B     <==>  A = B.right
+                    (3) B in A.past    <==>  A in B.future
+                    (4) B in A.future  <==>  A in B.past
+
+                In order to maintain relations (3) and (4), the original value of the attribute
+                assigned to the given key must be tracked, so as to know which event to update
+                after the new attribute assignment.
         """
-        if key in PASS_THRU_ATTRS:
-            value = [event_key(v) for v in value] if isinstance(value, Iterable) else event_key(value)
-            getattr(self.space_time, PASS_THRU_ATTRS[key])[self.key] = value
-        return super().__setattr__(key, value)
+        if key not in PASS_THRU_ATTRS:
+            return super().__setattr__(key, value)
+
+        # Assign new value
+        value_key = [event_key(v) for v in value] if isinstance(value, Iterable) else event_key(value)
+        original_value = getattr(self, key)
+        getattr(self.space_time, PASS_THRU_ATTRS[key])[self.key] = value_key
+
+        # Curate remaining values for edge-consistency
+        if isinstance(value, Iterable):
+            # Update the edge-consistency dual-attribute of the newly assigned event
+            new_events = [n for n in value if n not in original_value]
+            for n in new_events:
+                if self.key not in getattr(n.space_time, PASS_THRU_ATTRS[EDGE_CONSISTENCY_ATTR_DUALS[key]])[n.key]:
+                    getattr(n.space_time, PASS_THRU_ATTRS[EDGE_CONSISTENCY_ATTR_DUALS[key]])[n.key].append(self.key)
+
+            # Update the edge-consistency dual-attribute of the replaced event
+            # TODO must decide about replaced edge behavior
+            # replaced_events = [n for n in original_value if n not in value]
+            # for r in replaced_events:
+            #     if self.key in getattr(r.space_time, PASS_THRU_ATTRS[EDGE_CONSISTENCY_ATTR_DUALS[key]])[r.key]:
+            #         getattr(r.space_time, PASS_THRU_ATTRS[EDGE_CONSISTENCY_ATTR_DUALS[key]])[r.key].remove(self.key)
+        else:
+            # Update the edge-consistency dual-attribute of the newly assigned event
+            if getattr(value, EDGE_CONSISTENCY_ATTR_DUALS[key]) != self:
+                setattr(value, EDGE_CONSISTENCY_ATTR_DUALS[key], self)
+
+            # Update the edge-consistency dual-attribute of the replaced event
+            # TODO we need to think about this behavior, the replaced event has no natural replaced attribute?
+            # getattr(original_value.space_time, PASS_THRU_ATTRS[EDGE_CONSISTENCY_ATTR_DUALS[key]])[original_value.key] = None
 
     @property
     def spatial_neighbors(self):

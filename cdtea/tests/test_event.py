@@ -100,6 +100,52 @@ class TestEvent:
         assert not e2.is_gluing_point
 
 
+class TestEdgeConsistency:
+    """Test Edge Consistency Rules"""
+
+    def test_consistent_set_left(self):
+        """Check set .left"""
+        dst = test_space_time.dummy_space_time(3, 3)
+        e0, e1, e2, e3, e4, e5, e6, e7, e8 = event.events(dst, range(9))
+
+        assert e0.right == e1
+        e0.right = e2  # this doesn't make physical sense, but we're testing interface
+        assert e2.left == e0
+        # assert e1.left is None
+
+    def test_consistent_set_right(self):
+        """Check set .right"""
+        dst = test_space_time.dummy_space_time(3, 3)
+        e0, e1, e2, e3, e4, e5, e6, e7, e8 = event.events(dst, range(9))
+
+        assert e0.left == e2
+        e0.left = e1
+        assert e1.right == e0
+        # assert e8.left is None
+
+    def test_consistent_set_past(self):
+        """Check set .past"""
+        dst = test_space_time.dummy_space_time(3, 3)
+        e0, e1, e2, e3, e4, e5, e6, e7, e8 = event.events(dst, range(9))
+
+        assert e0.past == [e8, e6]
+        e0.past = [e8, e7]
+        assert e0 in e7.future
+        assert e0 in e8.future
+        # assert e0 not in e6.future
+
+    def test_consistent_set_future(self):
+        """Check set .future"""
+        dst = test_space_time.dummy_space_time(3, 3)
+        e0, e1, e2, e3, e4, e5, e6, e7, e8 = event.events(dst, range(9))
+
+        assert e0.future == [e3, e4]
+        e0.future = [e4, e5]
+        assert e0 in e4.past
+        assert e0 in e5.past
+        # assert e0 not in e4.past
+
+
 class TestEventUtilities:
     """Test utility functions in event module"""
 
