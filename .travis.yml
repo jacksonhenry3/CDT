@@ -17,7 +17,7 @@ jobs:
 
 branches:
   only:
-    - master
+    - main
 
 install:
   - ./.travis/install.sh
