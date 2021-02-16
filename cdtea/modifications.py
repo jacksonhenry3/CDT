@@ -1,7 +1,7 @@
 """
 This module contains functions that modify a spacetime.
 """
-from cdtea.event import Event
+import cdtea.event as event
 
 
 def move(st, node, future, past):
@@ -12,16 +12,16 @@ def move(st, node, future, past):
 
     # remove the sub_space that is going to be modified
     sub_space = st.pop([node])
-    future_s = Event(sub_space, future)  # Need these two because they have been "popped" out of the original spacetime
-    past_s = Event(sub_space, past)
+    future_s = event.Event(sub_space, future)  # Need these two because they have been "popped" out of the original spacetime
+    past_s = event.Event(sub_space, past)
 
     # increment the total node counter
     sub_space.add_node(st.max_node + 1)
 
     # create a node object for easy manipulation. This also automatically adds the node to the sub_space
-    new_s = Event(sub_space, st.max_node + 1)
-    node_s = Event(sub_space, node)
-    left_s = Event(sub_space, node_s.left)
+    new_s = event.Event(sub_space, st.max_node + 1)
+    node_s = event.Event(sub_space, node)
+    left_s = event.Event(sub_space, node_s.left)
     left = node_s.left
     right = node_s.right
 
@@ -132,8 +132,8 @@ def imove(st, node):
     left = node.left
     sub_space = st.pop([node, left])
 
-    left_s = Event(sub_space, left.key)
-    node_s = Event(sub_space, node.key)
+    left_s = event.Event(sub_space, left.key)
+    node_s = event.Event(sub_space, node.key)
 
     new_future = left_s.future
     new_past = left_s.past

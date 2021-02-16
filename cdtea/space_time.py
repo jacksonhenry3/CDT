@@ -25,13 +25,13 @@ class SpaceTime(object):
         self.node_future = {}  # a dict with node indices as keys
         self.faces_containing = {}
 
-        self.faces = []  # faces is a frozenset of node indeces
+        self.faces = []  # faces is a frozenset of node indices
         self.face_dilaton = {}  # a dict with keys of face tuples and field vals
         self.face_x = {}  # a dict with keys of face tuples space-like connected
         self.face_t = {}  # a dict with keys of face tuples time-like connected
 
-        # This could be modified to include a list of dead refrences
-        self.dead_refrences = []
+        # This could be modified to include a list of dead references
+        self.dead_references = []
 
 
     @property
@@ -105,7 +105,7 @@ class SpaceTime(object):
         # removes duplicates
         faces = list(set(faces))
         nodes = list(set(nodes))
-        self.dead_refrences = nodes.copy()  # i.e these nodes are no longer in the st
+        self.dead_references = nodes.copy()  # i.e these nodes are no longer in the st
 
         # set the sub_space nodes and faces
         sub_space.nodes = [event.event_key(n) for n in nodes]
@@ -143,10 +143,10 @@ class SpaceTime(object):
         """
 
         # Check to make sure that sub_space fills self aproapriatly
-        if any(n not in sub_space.nodes for n in self.dead_refrences):
+        if any(n not in sub_space.nodes for n in self.dead_references):
             pass
             # print("sub_space cannot fill space_time gap")
-            # print("dead refrences are {}".format(self.dead_refrences))
+            # print("dead refrences are {}".format(self.dead_references))
             # print("sub_space nodes are {}".format(sub_space.nodes))
             # raise ValueError()
 
