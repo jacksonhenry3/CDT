@@ -2,22 +2,22 @@ language: python
 
 jobs:
   include:
-    - os: linux
-      python: 3.7
-      env: TOXENV=py37
+#    - os: linux
+#      python: 3.7
+#      env: TOXENV=py37
     - os: linux
       python: 3.8
       env: TOXENV=py38
-    - os: osx
-      language: generic
-      env: TOXENV=py37
+#    - os: osx
+#      language: generic
+#      env: TOXENV=py37
     - os: osx
       language: generic
       env: TOXENV=py38
 
 branches:
   only:
-    - master
+    - main
 
 install:
   - ./.travis/install.sh
