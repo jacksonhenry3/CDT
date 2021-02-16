@@ -33,9 +33,6 @@ class SpaceTime(object):
         # This could be modified to include a list of dead refrences
         self.dead_refrences = []
 
-        # consider inserting using something like this rather than max
-        # https://stackoverflow.com/questions/28176866/find-the-smallest-positive-number-not-in-list
-        # self.max_node = 0
 
     @property
     def max_node(self):
@@ -180,7 +177,7 @@ class SpaceTime(object):
         # Can we get rid of sub_space at this point somehow?
 
 
-def generate_flat(space_size, time_size):
+def generate_flat_spacetime(space_size, time_size):
     """
     Generates a flat spacetime with the specified dimensions.
     """

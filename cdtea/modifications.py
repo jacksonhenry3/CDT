@@ -2,6 +2,8 @@
 This module contains functions that modify a spacetime.
 """
 from cdtea.event import Event
+
+
 def move(st, node, future, past):
     """
     A move should add one node and 2 faces. we can pop all the structures to be modified out of the dicts and then push
@@ -10,7 +12,7 @@ def move(st, node, future, past):
 
     # remove the sub_space that is going to be modified
     sub_space = st.pop([node])
-    future_s = Event(sub_space, future) # Need these two because they have been "popped" out of the original spacetime
+    future_s = Event(sub_space, future)  # Need these two because they have been "popped" out of the original spacetime
     past_s = Event(sub_space, past)
 
     # increment the total node counter
@@ -36,7 +38,8 @@ def move(st, node, future, past):
 
     while f in node_s.future and not f.is_gluing_point:
         new_future_set.append(f)
-        sub_space.node_future[event.event_key(node)].remove(event.event_key(f)) # TODO cleanup the event key coercion by figuring out workaround for node.future.remove()
+        sub_space.node_future[event.event_key(node)].remove(event.event_key(
+            f))  # TODO cleanup the event key coercion by figuring out workaround for node.future.remove()
         sub_space.node_past[event.event_key(f)].remove(event.event_key(node))
         f = f.left
     new_s.future = list(set(new_future_set))
@@ -123,52 +126,53 @@ def move(st, node, future, past):
     node_s.faces = []
     st.push(sub_space)
 
+
 def imove(st, node):
-        """ merge two spatially adjacent nodes, always merges in one direction?"""
-        left = node.left
-        sub_space = st.pop([node, left])
+    """ merge two spatially adjacent nodes, always merges in one direction?"""
+    left = node.left
+    sub_space = st.pop([node, left])
 
-        left_s = Event(sub_space,left.key)
-        node_s = Event(sub_space,node.key)
+    left_s = Event(sub_space, left.key)
+    node_s = Event(sub_space, node.key)
 
-        new_future = left_s.future
-        new_past = left_s.past
-        new_left = left_s.left
+    new_future = left_s.future
+    new_past = left_s.past
+    new_left = left_s.left
 
-        #once event has symmetric behavior this can be simplified
-        for f in new_future:
-            sub_space.node_past[f.key].remove(left.key)
-            if f not in sub_space.node_future[node.key]:
-                sub_space.node_future[node.key].append(f.key)
-                sub_space.node_past[f.key].append(node.key)
+    # once event has symmetric behavior this can be simplified
+    for f in new_future:
+        sub_space.node_past[f.key].remove(left.key)
+        if f not in sub_space.node_future[node.key]:
+            sub_space.node_future[node.key].append(f.key)
+            sub_space.node_past[f.key].append(node.key)
 
-        for p in new_past:
-            sub_space.node_future[p.key].remove(left.key)
-            if p not in sub_space.node_past[node.key]:
-                sub_space.node_past[node.key].append(p.key)
-                sub_space.node_future[p.key].append(node.key)
+    for p in new_past:
+        sub_space.node_future[p.key].remove(left.key)
+        if p not in sub_space.node_past[node.key]:
+            sub_space.node_past[node.key].append(p.key)
+            sub_space.node_future[p.key].append(node.key)
 
-        sub_space.node_left[node.key] = new_left.key
-        sub_space.node_right[new_left.key] = node.key
+    sub_space.node_left[node.key] = new_left.key
+    sub_space.node_right[new_left.key] = node.key
 
-        sub_space.nodes.remove(left.key)
-        del sub_space.node_left[left.key]
-        del sub_space.node_right[left.key]
-        del sub_space.node_past[left.key]
-        del sub_space.node_future[left.key]
-        del sub_space.faces_containing[left.key]
+    sub_space.nodes.remove(left.key)
+    del sub_space.node_left[left.key]
+    del sub_space.node_right[left.key]
+    del sub_space.node_past[left.key]
+    del sub_space.node_future[left.key]
+    del sub_space.faces_containing[left.key]
 
-        faces = sub_space.get_faces_containing(left.key)
+    faces = sub_space.get_faces_containing(left.key)
 
-        sub_space.faces = [x for x in sub_space.faces if x not in faces]
-        for face in faces:
-            new_face = []
-            if node not in face:
-                for n in face:
-                    if n == left:
-                        n = node
-                    new_face.append(n)
-                sub_space.faces.append(frozenset(new_face))
-                sub_space.face_dilaton[frozenset(new_face)] = -1
+    sub_space.faces = [x for x in sub_space.faces if x not in faces]
+    for face in faces:
+        new_face = []
+        if node not in face:
+            for n in face:
+                if n == left:
+                    n = node
+                new_face.append(n)
+            sub_space.faces.append(frozenset(new_face))
+            sub_space.face_dilaton[frozenset(new_face)] = -1
 
-        st.push(sub_space)
+    st.push(sub_space)

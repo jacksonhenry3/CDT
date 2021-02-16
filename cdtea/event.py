@@ -48,7 +48,7 @@ class Event:
             item:
                 str, the name of the attribute to get
         """
-        if item in PASS_THRU_ATTRS:
+        if item in PASS_THRU_ATTRS :
             value = getattr(self.space_time, PASS_THRU_ATTRS[item])[self.key]
             if item in EVENT_RETURNING_ATTRS:
                 if isinstance(value, Iterable):
