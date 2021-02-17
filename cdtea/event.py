@@ -4,7 +4,7 @@ sugar for code readability
 """
 
 import typing
-from collections import Iterable
+from collections.abc import Iterable
 
 PASS_THRU_ATTRS = {
     # Mapping of attribute name in Node object and corresponding lookup-dict in SpaceTime object
