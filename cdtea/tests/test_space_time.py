@@ -1,12 +1,13 @@
 """Unittests for SpaceTime"""
 
 from cdtea.space_time import SpaceTime
+from cdtea.space_time import generate_flat_spacetime
 
 
 def dummy_space_time(spatial_size: int = 2, temporal_size: int = 1):
     """Helper function for creating SpaceTime for testing"""
     st = SpaceTime()
-    SpaceTime.generate_flat_spacetime(spatial_size, temporal_size)
+    generate_flat_spacetime(spatial_size, temporal_size)
     return st
 
 
