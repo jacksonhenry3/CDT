@@ -138,7 +138,7 @@ def plot_3d_cyl(st, shading=shading_config):
 
 
 def plot_2d(st, offeset=0):
-    theta_x, theta_t = get_naive_layer_shift(st)
+    theta_x, theta_t = get_naive_coords(st)
     #
     import numpy as np
     import matplotlib.pyplot as plt

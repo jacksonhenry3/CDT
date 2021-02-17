@@ -3,7 +3,13 @@ from math import pi
 from cdtea import event
 import math
 
+"""
+a coordinate function is one that takes in a spacetime and outputs a dictionairy with node indices as keys and coordinate tuples as values.
+"""
+
+
 # utility functions
+# finds the minimum angular distance beween two given angles
 def angular_seperation(theta_1, theta_2):
     res = -(((theta_1 - theta_2) + pi) % (2 * pi) - pi)
     if math.isnan(res):
@@ -14,6 +20,7 @@ def angular_seperation(theta_1, theta_2):
     return res
 
 
+# returns a boole describing if arg is between theta_1 and theta_2 in the shortest direction
 def is_between(theta_1, theta_2, arg):
     # sanitize the angles
     start = theta_1 % (2 * pi)
@@ -36,59 +43,19 @@ def get_naive_coords(st):
     """
     Returns two dicts with (space angle , time angle)
     """
-    layers = np.array(st.get_layers())
+    layers = st.get_layers()
     T = len(layers)
-    theta_x = []
-    theta_t = []
+    theta_x = {}
+    theta_t = {}
 
-    # this whole shift thing is, it think, unesescarily complicated, perhaps ther is a mod 2 pi that copuld deal with it like in the  time weighted coords function
-    shift = -np.repeat(np.arange(0, T), 2)
     for t, layer in enumerate(layers):
         N = len(layer)
         slot_width = 2 * pi / N
-        theta_x.append(
-            np.roll(np.arange(N) + slot_width / 2.0, shift[t]) * slot_width
-            + slot_width / 2.0 * (-t % 2)
-        )
-        theta_t.append(np.full(N, t) / T * 2 * pi)
-    theta_x = theta_x
-    theta_t = theta_t
-    theta_x_dict = {}
-    theta_t_dict = {}
-
-    for t, layer in enumerate(layers):
         for x, n in enumerate(layer):
-            theta_x_dict[n] = theta_x[t][x]
-            theta_t_dict[n] = theta_t[t][x]
+            theta_x[n] = ((n - t / 2.) * slot_width) % (2 * pi)
+            theta_t[n] = t / T * 2 * pi
 
-    return (theta_x_dict, theta_t_dict)
-
-
-# def get_naive_coords(st):
-#     """
-#     Returns two dicts with (space angle , time angle)
-#     """
-#     layers = np.array(st.get_layers())
-#     T = len(layers)
-#     theta_x = []
-#     theta_t = []
-#
-#     for t, layer in enumerate(layers):
-#         N = len(layer)
-#         slot_width = 2 * pi / N
-#         theta_x.append((np.arange(N) + slot_width / 2.0) * slot_width)
-#         theta_t.append(np.full(N, t) / T * 2 * pi)
-#     theta_x = theta_x
-#     theta_t = theta_t
-#     theta_x_dict = {}
-#     theta_t_dict = {}
-#
-#     for t, layer in enumerate(layers):
-#         for x, n in enumerate(layer):
-#             theta_x_dict[n] = theta_x[t][x]
-#             theta_t_dict[n] = theta_t[t][x]
-#
-#     return (theta_x_dict, theta_t_dict)
+    return (theta_x, theta_t)
 
 
 def get_naive_layer_shift(st, theta_x=False, theta_t=False):
