@@ -1,6 +1,6 @@
 import random
 
-from cdtea import display
+from cdtea.visualization import plot_space_time
 from cdtea.space_time import SpaceTime
 
 
@@ -25,7 +25,7 @@ def main():
     # FST.imove(n)
     print("plottin")
     # display.get_naive_coords(FST)
-    display.plot_2d(FST)
+    plot_space_time.plot_2d(FST)
 
 
 if __name__ == '__main__':  # import shielding
