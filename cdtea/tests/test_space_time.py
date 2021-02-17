@@ -6,7 +6,7 @@ from cdtea.space_time import SpaceTime
 def dummy_space_time(spatial_size: int = 2, temporal_size: int = 1):
     """Helper function for creating SpaceTime for testing"""
     st = SpaceTime()
-    st.generate_flat(space_size=spatial_size, time_size=temporal_size)
+    SpaceTime.generate_flat_spacetime(spatial_size, temporal_size)
     return st
 
 
