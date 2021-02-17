@@ -52,15 +52,18 @@ def get_naive_coords(st):
         N = len(layer)
         slot_width = 2 * pi / N
         for x, n in enumerate(layer):
-            theta_x[n] = ((n - t / 2.) * slot_width) % (2 * pi)
+            theta_x[n] = ((x + t / 2.) * slot_width) % (2 * pi)
             theta_t[n] = t / T * 2 * pi
 
     return (theta_x, theta_t)
 
 
-def get_naive_layer_shift(st, theta_x=False, theta_t=False):
-    if not theta_x or not theta_t:
-        theta_x, theta_t = get_spring_coords(st)
+def untwist(coords, st, theta_x=False, theta_t=False):
+    """
+    It is common for coordinates to become "twisted" meaning for example, that the past layer is left shifted while the  future layer is right shifted. this occurs becouse most
+    measures weight past and future edge lengths similarly so the minimum edge length that can be reached by adjusting a single node adds a twist.
+    """
+    theta_x, theta_t = coords
     layers = st.get_layers()
     for t, layer in enumerate(layers[1:]):
         t += 1
