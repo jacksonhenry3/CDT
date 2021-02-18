@@ -3,6 +3,12 @@ from matplotlib.collections import LineCollection
 import random
 from cdtea.visualization.coordinates import *
 
+"""
+Valuable details
+ https://chart-studio.plotly.com/~empet/14742/mesh3d-with-intensity-tests/#/
+ https://plotly.com/python/reference/mesh3d/
+"""
+
 
 # 3d plots
 
@@ -31,7 +37,7 @@ def plot_3d(st, type="torus", name="temp_plot", get_coords=get_naive_coords, out
         if type == "cylinder":
             x.append(inner_radius * np.cos(v))
             y.append(inner_radius * np.sin(v))
-            z.append(inner_radius  * u)
+            z.append(inner_radius * u * np.sqrt(3) / 2.)
 
         """
         new types can be added here
