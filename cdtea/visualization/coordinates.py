@@ -36,8 +36,12 @@ def is_between(theta_1, theta_2, arg):
     return sep / delta > 0 and abs(delta) < abs(sep)
 
 
-# coordinate definitions
+# gives the total legnth of all edges in a layout.
+def total_length(coords):
+    pass
 
+
+# coordinate definitions
 
 def get_naive_coords(st):
     """
@@ -55,10 +59,10 @@ def get_naive_coords(st):
             theta_x[n] = ((x + t / 2.) * slot_width) % (2 * pi)
             theta_t[n] = t / T * 2 * pi
 
-    return (theta_x, theta_t)
+    return theta_x, theta_t
 
 
-def untwist(coords, st, theta_x=False, theta_t=False):
+def untwist(coords, st):
     """
     It is common for coordinates to become "twisted" meaning for example, that the past layer is left shifted while the  future layer is right shifted. this occurs becouse most
     measures weight past and future edge lengths similarly so the minimum edge length that can be reached by adjusting a single node adds a twist.
@@ -75,58 +79,31 @@ def untwist(coords, st, theta_x=False, theta_t=False):
                     for c in n.past
                 ]
             )
-            print(d_offset)
-            offset = offset + d_offset
-        print(t)
-        print(offset / len(layer))
 
-        print()
+            offset = offset + d_offset
         for m in layer:
             theta_x[m] = (theta_x[m] + offset / 2.0) % (2 * pi)
 
-    return (theta_x, theta_t)
-
-
-def get_time_weighted_coords(st):
-    """
-        Returns two dicts with (space angle , time angle)
-        """
-    layers = np.array(st.get_layers())
-    T = len(layers)
-    theta_x_dict = {}
-    theta_t_dict = {}
-    shift = -np.repeat(np.arange(0, T), 2)
-    total_time_edges = [sum([len(st.node_t(n)) for n in layer]) for layer in layers]
-    for t, layer in enumerate(layers):
-        X = len(layer)
-        slot_width = 2 * pi / total_time_edges[t]
-        # this 4 should be replaced by a calcuation of the first node time connections
-        node = layer[0]
-        theta_x = len(st.node_t(node)) * slot_width / 2.0 * t
-        for n in layer:
-            theta_x = (theta_x + 1 / 2.0 * slot_width * len(st.node_t(n))) % (2 * pi)
-            theta_x_dict[n] = theta_x
-            theta_t_dict[n] = t / T * 2 * pi
-            theta_x = (theta_x + 1 / 2.0 * slot_width * len(st.node_t(n))) % (2 * pi)
-            prev_n = n
-
-    return (theta_x_dict, theta_t_dict)
+    return theta_x, theta_t
 
 
 def get_average_coords(st):
     theta_x, theta_t = get_naive_coords(st)
 
     for i in range(200):
+        print(i)
         for n in st.nodes:
             # print(n)
             # sums the x length of all connections to n
+            e = event.Event(st, n)
+
             total_x_length = sum(
                 [
-                    angular_seperation(theta_x[n], theta_x[c])
-                    for c in st.node_all_connections(n)
+                    angular_seperation(theta_x[n], theta_x[c.key])
+                    for c in e.neighbors
                 ]
             )
-            print(angular_seperation(total_x_length, 0))
+            # print(angular_seperation(total_x_length, 0))
             # attempt to change posiotion by the total difference therby reducing the total difference to zero
             new_x_theta = (theta_x[n] + total_x_length / 200.0) % (2 * pi)
             l = theta_x[st.node_left[n]]
