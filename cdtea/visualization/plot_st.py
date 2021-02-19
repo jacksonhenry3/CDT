@@ -2,12 +2,84 @@ import plotly.graph_objects as go
 from matplotlib.collections import LineCollection
 import random
 from cdtea.visualization.coordinates import *
+from plotly.offline import download_plotlyjs, init_notebook_mode, iplot, plot
 
 """
 Valuable details
  https://chart-studio.plotly.com/~empet/14742/mesh3d-with-intensity-tests/#/
  https://plotly.com/python/reference/mesh3d/
 """
+
+
+def standard_intensity(x, y, z):
+    return z
+
+
+def plotly_triangular_mesh(x, y, z, i, j, k, fc, intensities=standard_intensity, colorscale="Viridis",
+                           flatshading=True, showscale=False, reversescale=False, plot_edges=False):
+    # vertices = a numpy array of shape (n_vertices, 3)
+    # faces = a numpy array of shape (n_faces, 3) dtype=
+    # intensities can be either a function of (x,y,z) or a list of values
+
+    # if hasattr(intensities, '__call__'):
+    #     intensity = intensities(x, y, z)  # the intensities are computed here via the set function,
+    #     # that returns the list of vertices intensities
+    # elif isinstance(intensities, (list, np.ndarray)):
+    #     intensity = intensities  # intensities are given in a list
+    # else:
+    #     raise ValueError("intensities can be either a function or a list, np.array")
+
+    mesh = dict(type='mesh3d',
+                x=x,
+                y=y,
+                z=z,
+                colorscale=colorscale,
+                reversescale=reversescale,
+                # intensity=intensity,
+                flatshading=flatshading,
+                i=i,
+                j=j,
+                k=k,
+                name='',
+                showscale=showscale,
+                facecolor=fc
+                # vertexcolor
+
+                )
+
+    if showscale is True:
+        mesh.update(colorbar=dict(thickness=20, ticklen=4, len=0.75))
+
+    if plot_edges is False:  # the triangle sides are not plotted
+        return [mesh]
+    else:  # plot edges
+        # define the lists Xe, Ye, Ze, of x, y, resp z coordinates of edge end points for each triangle
+        # None separates data corresponding to two consecutive triangles
+        # tri_vertices = vertices[faces]
+        Xe = []
+        Ye = []
+        Ze = []
+        # for T in tri_vertices:
+        #     Xe += [T[k % 3][0] for k in range(4)] + [None]
+        #     Ye += [T[k % 3][1] for k in range(4)] + [None]
+        #     Ze += [T[k % 3][2] for k in range(4)] + [None]
+        for index in range(len(i)):
+            Xe += [x[i[index]], x[j[index]], x[k[index]], x[i[index]]] + [None]
+            Ye += [y[i[index]], y[j[index]], y[k[index]], y[i[index]]] + [None]
+            Ze += [z[i[index]], z[j[index]], z[k[index]], z[i[index]]] + [None]
+        # define the lines to be plotted
+        lines = dict(type='scatter3d',
+                     x=Xe,
+                     y=Ye,
+                     z=Ze,
+                     mode='lines',
+                     name='',
+                     opacity=1,
+                     line=dict(color='rgb(20,20,20)', width=5)
+
+                     )
+
+        return [mesh, lines]
 
 
 # 3d plots
@@ -44,34 +116,79 @@ def plot_3d(st, type="torus", name="temp_plot", get_coords=get_naive_coords, out
         """
 
         idx += 1
-
+    fc = []
+    import statistics
     for face in st.faces:
         face = list(face)
 
         i.append(node_to_idx[face[0]])
         j.append(node_to_idx[face[1]])
         k.append(node_to_idx[face[2]])
+        layers = [theta_t[n] for n in face]
+        mode = statistics.mode(layers)
+        outlier = [theta_t[n]  for n in face if theta_t[n]!= mode][0]
+        print(layers, mode, outlier)
+        if mode > outlier: #downwards pointing
+            print("a")
+            fc.append((0, 0, 200))
+        elif mode < outlier: #upwards pointing
+            print("b")
+            fc.append((200, 0, 0))
+        else:
+            print("?SDFSDFDSFSDFSDFSDFSDFSDDSFS?")
 
-        color.append((random.random() * 255., random.random() * 255., random.random() * 255.))
 
-    # TODO forward extra args so they can be used here
-    fig = go.Figure(data=[
-        go.Mesh3d(
-            x=x,
-            y=y,
-            z=z,
+    data = plotly_triangular_mesh(x, y, z, i, j, k, fc, plot_edges=True)
 
-            # i, j and k give the vertices of triangles
-            i=i,
-            j=j,
-            k=k,
+    noaxis = dict(
+        showbackground=False,
+        showgrid=False,
+        showline=False,
+        showticklabels=False,
+        ticks='',
+        title='',
+        zeroline=False)
 
-            flatshading=True,
-            facecolor=color
-        )
-    ])
+    layout = dict(
+        # title="Mesh 3d intensity test",
+        width=1000,
+        height=1000,
+        showlegend=False,
+        scene=dict(xaxis=noaxis,
+                   yaxis=noaxis,
+                   zaxis=noaxis,
+                   # aspectratio=dict(x=1,
+                   #                  y=1,
+                   #                  z=2
+                   #                  ),
+                   camera=dict(eye=dict(x=1.55, y=-1.55, z=1.55)),
+                   ),
 
-    fig.show()
+        hovermode=False,
+
+    )
+
+    fig = dict(data=data, layout=layout)
+    iplot(fig)
+
+    # # TODO forward extra args so they can be used here
+    # fig = go.Figure(data=[
+    #     go.Mesh3d(
+    #         x=x,
+    #         y=y,
+    #         z=z,
+    #
+    #         # i, j and k give the vertices of triangles
+    #         i=i,
+    #         j=j,
+    #         k=k,
+    #
+    #         flatshading=True,
+    #         facecolor=color
+    #     )
+    # ])
+    #
+    # fig.show()
 
 
 # 2d plot (cutting a space and time slice)
