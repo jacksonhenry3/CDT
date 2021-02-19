@@ -23,9 +23,9 @@ class TestEvent:
         assert e1 == e2
 
         # TODO uncomment the below test once equality defined for SpaceTime
-        # dst2 = test_space_time.dummy_space_time(2, 2)
-        # e1_2 = event.Event(space_time=dst2, event_key=1)
-        # assert e1 != e1_2
+        dst2 = test_space_time.dummy_space_time(2, 2)
+        e1_2 = event.Event(space_time=dst2, event_key=1)
+        assert e1 != e1_2
 
     def test_event_repr(self):
         """Test event string representation"""
@@ -48,20 +48,6 @@ class TestEvent:
         e0 = event.Event(space_time=dst, event_key=0)
         assert isinstance(e0.space_time, SpaceTime)
         assert isinstance(e0.key, int)
-
-    def test_event_pass_thru_setattr(self):
-        """Test event setattr behavior for passthru attributes"""
-        dst = test_space_time.dummy_space_time(2, 2)
-        e0, e1, e2, e3 = event.events(dst, range(4))
-        e0.right = e2  # this doesn't make physical sense, but we're testing interface
-        assert dst.node_right[0] == 2  # verify that the setattr updated the underlying SpaceTime instance
-
-    def test_event_safe_setattr(self):
-        """Test event setattr behavior for non passthru attributes"""
-        dst = test_space_time.dummy_space_time(2, 2)
-        e0, e1, e2, e3 = event.events(dst, range(4))
-        e0.key = -1  # this doesn't make physical sense, but we're testing interface
-        assert dst.node_right[0] == 1  # verify that the setattr DID NOT update the underlying SpaceTime instance TODO check more attrs / eq
 
     def test_event_hash(self):
         """Test Event Hash"""
@@ -109,9 +95,9 @@ class TestEdgeConsistency:
         e0, e1, e2, e3, e4, e5, e6, e7, e8 = event.events(dst, range(9))
 
         assert e0.right == e1
-        e0.right = e2  # this doesn't make physical sense, but we're testing interface
+        event.connect_spatial(e0, e2)
         assert e2.left == e0
-        # assert e1.left is None
+        assert e1.left is None
 
     def test_consistent_set_right(self):
         """Check set .right"""
@@ -119,9 +105,9 @@ class TestEdgeConsistency:
         e0, e1, e2, e3, e4, e5, e6, e7, e8 = event.events(dst, range(9))
 
         assert e0.left == e2
-        e0.left = e1
+        event.connect_spatial(e1, e0)
         assert e1.right == e0
-        # assert e8.left is None
+        assert e2.left is None
 
     def test_consistent_set_past(self):
         """Check set .past"""
@@ -129,10 +115,10 @@ class TestEdgeConsistency:
         e0, e1, e2, e3, e4, e5, e6, e7, e8 = event.events(dst, range(9))
 
         assert e0.past == [e8, e6]
-        e0.past = [e8, e7]
+        event.connect_temporal(e0, past=[e8, e7])
         assert e0 in e7.future
         assert e0 in e8.future
-        # assert e0 not in e6.future
+        assert e0 not in e6.future
 
     def test_consistent_set_future(self):
         """Check set .future"""
@@ -140,10 +126,23 @@ class TestEdgeConsistency:
         e0, e1, e2, e3, e4, e5, e6, e7, e8 = event.events(dst, range(9))
 
         assert e0.future == [e3, e4]
-        e0.future = [e4, e5]
+        event.connect_temporal(e0, future=[e4, e5])
         assert e0 in e4.past
         assert e0 in e5.past
-        # assert e0 not in e4.past
+        assert e0 not in e3.past
+
+    def test_set_faces(self):
+        dst = test_space_time.dummy_space_time(2, 2)
+        e0, e1, e2, e3 = event.events(dst)
+
+        assert e0.faces == [frozenset({0, 1, 3}),
+                            frozenset({0, 1, 3}),
+                            frozenset({0, 2, 3}),
+                            frozenset({0, 2, 3}),
+                            frozenset({0, 1, 2}),
+                            frozenset({0, 1, 2})]
+        event.set_faces(e0, [frozenset({0, 1, 3})])
+        assert e0.faces == [frozenset({0, 1, 3})]
 
 
 class TestEventUtilities:
