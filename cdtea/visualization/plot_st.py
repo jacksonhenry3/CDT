@@ -2,68 +2,45 @@ import plotly.graph_objects as go
 from matplotlib.collections import LineCollection
 import random
 from cdtea.visualization.coordinates import *
-from plotly.offline import iplot
+from plotly.offline import iplot, plot
 import matplotlib.pyplot as plt
 
 """
 Valuable details
- https://chart-studio.plotly.com/~empet/14742/mesh3d-with-intensity-tests/#/
+ https://chart-studio.plotly.com/~empet/14742/mesh3d-with-intensity-tests/
  https://plotly.com/python/reference/mesh3d/
 """
 
 
-def standard_intensity(x, y, z):
-    return z
-
-
-def plotly_triangular_mesh(x, y, z, i, j, k, fc, intensities=standard_intensity, colorscale="Viridis",
-                           flatshading=True, showscale=False, reversescale=False, plot_edges=False):
-    # vertices = a numpy array of shape (n_vertices, 3)
-    # faces = a numpy array of shape (n_faces, 3) dtype=
-    # intensities can be either a function of (x,y,z) or a list of values
-
-    # if hasattr(intensities, '__call__'):
-    #     intensity = intensities(x, y, z)  # the intensities are computed here via the set function,
-    #     # that returns the list of vertices intensities
-    # elif isinstance(intensities, (list, np.ndarray)):
-    #     intensity = intensities  # intensities are given in a list
-    # else:
-    #     raise ValueError("intensities can be either a function or a list, np.array")
+def plotly_triangular_mesh(nodes, faces, face_color=None, node_color=None, name="", plot_edges=True):
+    x, y, z = nodes
+    i, j, k = faces
 
     mesh = dict(type='mesh3d',
                 x=x,
                 y=y,
                 z=z,
-                colorscale=colorscale,
-                reversescale=reversescale,
-                # intensity=intensity,
-                flatshading=flatshading,
                 i=i,
                 j=j,
                 k=k,
-                name='',
-                showscale=showscale,
-                facecolor=fc
-                # vertexcolor
-
+                name=name,
+                opacity=.5,
+                hoverinfo='skip'
                 )
-
-    if showscale is True:
-        mesh.update(colorbar=dict(thickness=20, ticklen=4, len=0.75))
+    if node_color:
+        mesh["vertexcolor"] = node_color
+    elif face_color:
+        mesh["facecolor"] = face_color
 
     if plot_edges is False:  # the triangle sides are not plotted
         return [mesh]
     else:  # plot edges
         # define the lists Xe, Ye, Ze, of x, y, resp z coordinates of edge end points for each triangle
         # None separates data corresponding to two consecutive triangles
-        # tri_vertices = vertices[faces]
         Xe = []
         Ye = []
         Ze = []
-        # for T in tri_vertices:
-        #     Xe += [T[k % 3][0] for k in range(4)] + [None]
-        #     Ye += [T[k % 3][1] for k in range(4)] + [None]
-        #     Ze += [T[k % 3][2] for k in range(4)] + [None]
+
         for index in range(len(i)):
             Xe += [x[i[index]], x[j[index]], x[k[index]], x[i[index]]] + [None]
             Ye += [y[i[index]], y[j[index]], y[k[index]], y[i[index]]] + [None]
@@ -74,7 +51,7 @@ def plotly_triangular_mesh(x, y, z, i, j, k, fc, intensities=standard_intensity,
                      y=Ye,
                      z=Ze,
                      mode='lines',
-                     name='',
+                     name=name,
                      opacity=1,
                      line=dict(color='rgb(20,20,20)', width=5)
 
@@ -85,7 +62,31 @@ def plotly_triangular_mesh(x, y, z, i, j, k, fc, intensities=standard_intensity,
 
 # 3d plots
 
-def plot_3d(st, type="torus", name="temp_plot", get_coords=get_naive_coords, outer_radius=2, inner_radius=1):
+# color functions
+# BROKEN, idealy prmpts some change to space-time
+def face_color_time_direction(face):
+    import statistics
+    T = len(st.get_layers())
+
+    face = list(face)
+
+    layers = [theta_t[n] for n in face]
+    mode = statistics.mode(layers)
+    outlier = [theta_t[n] for n in face if theta_t[n] != mode][0]
+
+    # this colors past pointing triangles blue
+    if mode > outlier:  # past pointing
+        return ((0, 0, 200))
+    # this colors future pointing triangles red
+    elif mode < outlier:  # future pointing
+        return ((200, 0, 0))
+
+
+def node_color_random(n):
+    return ((random.random(), random.random(), random.random()))
+
+
+def plot_3d(st, type="torus", filename=None, get_coords=get_naive_coords, radius_1=2, radius_2=1, plot_edges=True, node_color_function=node_color_random):
     """
     Generate a 3d plot of the space-time embedded in the surface of a torus.
     """
@@ -96,51 +97,51 @@ def plot_3d(st, type="torus", name="temp_plot", get_coords=get_naive_coords, out
     idx = 0
     node_to_idx = {}  # maps an event to an index.
 
+    node_color = []
+
     # loop through each node and append its coordinates
     for n in st.nodes:
         node_to_idx[n] = idx
         v = theta_x[n]
         u = theta_t[n]
 
+        # node color is set here
+        node_color.append(node_color_function(n))
+
         if type == "torus":
-            x.append((outer_radius + inner_radius * np.cos(v)) * np.cos(u))
-            y.append((outer_radius + inner_radius * np.cos(v)) * np.sin(u))
-            z.append(inner_radius * np.sin(v))
+            x.append((radius_1 + radius_2 * np.cos(v)) * np.cos(u))
+            y.append((radius_1 + radius_2 * np.cos(v)) * np.sin(u))
+            z.append(radius_2 * np.sin(v))
 
         if type == "cylinder":
-            x.append(inner_radius * np.cos(v))
-            y.append(inner_radius * np.sin(v))
-            z.append(inner_radius * u * np.sqrt(3) / 2.)
+            x.append(radius_2 * np.cos(v))
+            y.append(radius_2 * np.sin(v))
+            z.append(radius_2 * u * np.sqrt(3) / 2.)
 
         """
         new types can be added here
         """
 
         idx += 1
-    fc = []
-    import statistics
+
+    face_color = []
+
     for face in st.faces:
         face = list(face)
+
+        # doesn't draw any triangles that would stretch across two time slices. This removes the middle triangles connecting the top to the bottom
+        #needs more info from space time to find triangle orientation, should this be stored in each triangle?
+        # if type == "cylinder" and abs(mode - outlier) > 2 * pi / T * 2:
+        #     continue
 
         i.append(node_to_idx[face[0]])
         j.append(node_to_idx[face[1]])
         k.append(node_to_idx[face[2]])
-        layers = [theta_t[n] for n in face]
-        mode = statistics.mode(layers)
-        outlier = [theta_t[n]  for n in face if theta_t[n]!= mode][0]
-        print(layers, mode, outlier)
-        if mode > outlier: #downwards pointing
-            print("a")
-            fc.append((0, 0, 200))
-        elif mode < outlier: #upwards pointing
-            print("b")
-            fc.append((200, 0, 0))
-        else:
-            print("?SDFSDFDSFSDFSDFSDFSDFSDDSFS?")
 
+    # generate the mesh
+    data = plotly_triangular_mesh((x, y, z), (i, j, k), face_color=face_color, node_color=node_color, name=filename, plot_edges=plot_edges)
 
-    data = plotly_triangular_mesh(x, y, z, i, j, k, fc, plot_edges=True)
-
+    # display configuration
     noaxis = dict(
         showbackground=False,
         showgrid=False,
@@ -155,14 +156,11 @@ def plot_3d(st, type="torus", name="temp_plot", get_coords=get_naive_coords, out
         width=1000,
         height=1000,
         showlegend=False,
+        title=filename,
         scene=dict(xaxis=noaxis,
                    yaxis=noaxis,
                    zaxis=noaxis,
-                   # aspectratio=dict(x=1,
-                   #                  y=1,
-                   #                  z=2
-                   #                  ),
-                   camera=dict(eye=dict(x=1.55, y=-1.55, z=1.55)),
+                   # camera=dict(eye=dict(x=1.55, y=-1.55, z=1.55)),
                    ),
 
         hovermode=False,
@@ -170,26 +168,11 @@ def plot_3d(st, type="torus", name="temp_plot", get_coords=get_naive_coords, out
     )
 
     fig = dict(data=data, layout=layout)
-    iplot(fig)
 
-    # # TODO forward extra args so they can be used here
-    # fig = go.Figure(data=[
-    #     go.Mesh3d(
-    #         x=x,
-    #         y=y,
-    #         z=z,
-    #
-    #         # i, j and k give the vertices of triangles
-    #         i=i,
-    #         j=j,
-    #         k=k,
-    #
-    #         flatshading=True,
-    #         facecolor=color
-    #     )
-    # ])
-    #
-    # fig.show()
+    if filename:
+        plot(fig, filename="./" + filename + ".html")
+    else:
+        iplot(fig)
 
 
 # 2d plot (cutting a space and time slice)
