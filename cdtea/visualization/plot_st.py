@@ -2,7 +2,8 @@ import plotly.graph_objects as go
 from matplotlib.collections import LineCollection
 import random
 from cdtea.visualization.coordinates import *
-from plotly.offline import download_plotlyjs, init_notebook_mode, iplot, plot
+from plotly.offline import iplot
+import matplotlib.pyplot as plt
 
 """
 Valuable details
