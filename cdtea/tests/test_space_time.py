@@ -1,5 +1,5 @@
 """Unittests for SpaceTime"""
-from cdtea import event
+from cdtea import event, modifications
 from cdtea.space_time import SpaceTime
 from cdtea.space_time import generate_flat_spacetime
 
@@ -31,12 +31,6 @@ class TestSpaceTime:
         dst2 = dst.pop([e0])
         dst.push(dst2)
         # TODO add real equivalence check
-        assert isinstance(dst, SpaceTime)
-
-    def test_move(self):
-        dst = dummy_space_time(3, 3)
-        n, f, p = event.events(dst, [4, 7, 1])
-        dst.move(n, f, p)
         assert isinstance(dst, SpaceTime)
 
 

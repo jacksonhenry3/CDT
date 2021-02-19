@@ -16,7 +16,8 @@ def move(st, node, future, past):
     past_s = event.Event(sub_space, past)
 
     # increment the total node counter
-    sub_space.add_node(st.max_node + 1)
+    new_node_num = max(st.nodes + sub_space.nodes) + 1
+    sub_space.add_node(new_node_num)
 
     # create a node object for easy manipulation. This also automatically adds the node to the sub_space
     new_s = event.Event(sub_space, st.max_node + 1)
@@ -25,11 +26,9 @@ def move(st, node, future, past):
     left = node_s.left
     right = node_s.right
 
-    # spatial changes.
-    node_s.left = new_s
-    new_s.right = node_s
-    new_s.left = left
-    left_s.right = new_s
+    # spatial changes
+    event.connect_spatial(new_s, node_s)  # new_s.right = node_s and node_s.left = new_s
+    event.connect_spatial(left_s, new_s)  # new_s.left = left_s and left_s.right = new_s
 
     # future changes
     # TODO examine algorithm concept of connection vs Spacetime (e.g. after popping a node out, what does asking for "left" mean?)
@@ -42,11 +41,11 @@ def move(st, node, future, past):
             f))  # TODO cleanup the event key coercion by figuring out workaround for node.future.remove()
         sub_space.node_past[event.event_key(f)].remove(event.event_key(node))
         f = f.left
-    new_s.future = list(set(new_future_set))
+    event.connect_temporal(new_s, future=list(set(new_future_set)))
     old_future_set = list(
         set(node_s.future) - set(new_future_set)
     ) + [future_s]
-    node_s.future = old_future_set
+    event.connect_temporal(node_s, future=old_future_set)
     # sub_space.node_past[future].append(new_node)
 
     # past changes
@@ -58,9 +57,9 @@ def move(st, node, future, past):
         sub_space.node_future[event.event_key(p)].remove(event.event_key(node_s))
         p = p.left
 
-    new_s.past = new_past_set
+    event.connect_temporal(new_s, past=new_past_set)
     old_past_set = list(set(node_s.past) - set(new_past_set)) + [past_s]
-    node_s.past = old_past_set
+    event.connect_temporal(node_s, past=old_past_set)
     # sub_space.node_future[past].append(new_node)
 
     # face changes
@@ -122,8 +121,8 @@ def move(st, node, future, past):
     sub_space.faces.append(frozenset({left.key, new_s.key, leftmost_past.key}))
     sub_space.face_dilaton[frozenset({left.key, new_s.key, leftmost_past.key})] = -1
 
-    new_s.faces = []
-    node_s.faces = []
+    event.set_faces(new_s, [])
+    event.set_faces(node_s, [])
     st.push(sub_space)
 
 

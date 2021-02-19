@@ -2,13 +2,13 @@ import random
 
 from cdtea import display
 from cdtea.space_time import SpaceTime
-from cdtea.space_time import generate_flat
+from cdtea.space_time import generate_flat_spacetime
 from cdtea.modifications import move,imove
 from cdtea.event import Event
 def main():
 
     size = 40
-    FST = generate_flat(size, size)
+    FST = generate_flat_spacetime(size, size)
     random.seed(9230)
     #
     # for i in range(10):
