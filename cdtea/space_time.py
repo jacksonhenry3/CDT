@@ -39,6 +39,13 @@ class SpaceTime(object):
         # https://stackoverflow.com/questions/28176866/find-the-smallest-positive-number-not-in-list
         # self.max_node = 0
 
+    def __eq__(self, other):
+        """Equivalence between """
+        if not isinstance(other, SpaceTime):
+            return False
+        # TODO add checking of edges and faces
+        return self.nodes == other.nodes
+
     @property
     def max_node(self):
         return max(self.nodes)
@@ -139,9 +146,9 @@ class SpaceTime(object):
         self.nodes.append(n)
         self.node_left[n] = None
         self.node_right[n] = None
-        self.node_future[n] = None
-        self.node_past[n] = None
-        self.faces_containing[n] = None
+        self.node_future[n] = []
+        self.node_past[n] = []
+        self.faces_containing[n] = []
 
     def remove_node(self, n: int):
         """Function for removing node"""
@@ -163,7 +170,7 @@ class SpaceTime(object):
         """
         This creates a new space-time by removing all nodes adjacent to node and returning that sub_space
         """
-        sub_space = SpaceTime(closed=False) # the sub_space will contain references to nodes that do not belong to it (for gluing purposes)
+        sub_space = SpaceTime(closed=False)  # the sub_space will contain references to nodes that do not belong to it (for gluing purposes)
 
         nodes = node_list.copy()
         faces = []
@@ -176,18 +183,19 @@ class SpaceTime(object):
         self.dead_refrences = nodes.copy()  # i.e these nodes are no longer in the st
 
         # set the sub_space nodes and faces
-        sub_space.nodes = [event.event_key(n) for n in nodes]
+        for n in nodes:
+            sub_space.add_node(n=event.event_key(n))
         sub_space.faces = faces.copy()
 
         # loop through all removed nodes and remove their properties from self and add them to sub_space
         # taking care to label gluing points (references to nodes that do not belong to sub_space)
         coerce = lambda keys: event.coerce_gluing_point(sub_space, keys)
         for n_s, n in event.events([sub_space, self], sub_space.nodes):
-            n_s.left = coerce(n.left)
-            n_s.right = coerce(n.right)
-            n_s.past = coerce(n.past)
-            n_s.future = coerce(n.future)
-            n_s.faces = n.faces
+            event.connect_spatial(coerce(n.left), n_s)  # n_s.left = coerce(n.left)
+            event.connect_spatial(n_s, coerce(n.right))  # n_s.right = coerce(n.right)
+            event.connect_temporal(n_s, past=coerce(n.past))  # n_s.past = coerce(n.past)
+            event.connect_temporal(n_s, future=coerce(n.future))  # n_s.future = coerce(n.future)
+            event.set_faces(n_s, n.faces)
 
         # loop through all removed faces and remove their properties from self and add them to sub_space
         for f in sub_space.faces:
@@ -225,12 +233,12 @@ class SpaceTime(object):
         for n in nodes:
             self.add_node(n)
 
-        for n, n_s in zip(event.events(self, nodes), event.events(sub_space, nodes)):
-            n.left = n_s.left
-            n.right = n_s.right
-            n.past = n_s.past
-            n.future = n_s.future
-            n.faces = n_s.faces
+        for n, n_s in event.events([self, sub_space], nodes):
+            event.connect_spatial(n_s.left, n)  # n.left = n_s.left
+            event.connect_spatial(n, n_s.right)  # n.right = n_s.right
+            event.connect_temporal(n, past=n_s.past)  # n.past = n_s.past
+            event.connect_temporal(n, future=n_s.future)  # n.future = n_s.future
+            event.set_faces(n, n_s.faces)
 
         for f in faces:
             self.faces.append(f)
@@ -251,54 +259,55 @@ class SpaceTime(object):
 
         # remove the sub_space that is going to be modified
         sub_space = self.pop([node])
-        future_s = Event(sub_space, future) # Need these two because they have been "popped" out of the original spacetime
+        future_s = Event(sub_space, future)  # Need these two because they have been "popped" out of the original spacetime
         past_s = Event(sub_space, past)
 
         # increment the total node counter
-        sub_space.add_node(self.max_node + 1)
+        new_node_num = max(self.nodes + sub_space.nodes) + 1
+        sub_space.add_node(new_node_num)
 
         # create a node object for easy manipulation. This also automatically adds the node to the sub_space
-        new_s = Event(sub_space, self.max_node + 1)
+        new_s = Event(sub_space, new_node_num)
         node_s = Event(sub_space, node)
         left_s = Event(sub_space, node_s.left)
         left = node_s.left
         right = node_s.right
 
-        # spatial changes.
-        node_s.left = new_s
-        new_s.right = node_s
-        new_s.left = left
-        left_s.right = new_s
+        # spatial changes
+        event.connect_spatial(new_s, node_s)  # new_s.right = node_s and node_s.left = new_s
+        event.connect_spatial(left_s, new_s)  # new_s.left = left_s and left_s.right = new_s
 
         # future changes
         # TODO examine algorithm concept of connection vs Spacetime (e.g. after popping a node out, what does asking for "left" mean?)
         new_future_set = [future_s]
         f = future_s.left
 
-        while f in node_s.future and not f.is_gluing_point:
-            new_future_set.append(f)
-            sub_space.node_future[event.event_key(node)].remove(event.event_key(f)) # TODO cleanup the event key coercion by figuring out workaround for node.future.remove()
-            sub_space.node_past[event.event_key(f)].remove(event.event_key(node))
+        while f in node_s.future:
+            if not f.is_gluing_point:
+                new_future_set.append(f)
+                sub_space.node_future[event.event_key(node)].remove(event.event_key(f))  # TODO cleanup the event key coercion by figuring out workaround for node.future.remove()
+                sub_space.node_past[event.event_key(f)].remove(event.event_key(node))
             f = f.left
-        new_s.future = list(set(new_future_set))
+        event.connect_temporal(new_s, future=list(set(new_future_set)))
         old_future_set = list(
             set(node_s.future) - set(new_future_set)
         ) + [future_s]
-        node_s.future = old_future_set
+        event.connect_temporal(node_s, future=old_future_set)
         # sub_space.node_past[future].append(new_node)
 
         # past changes
         new_past_set = [past_s]
         p = past_s.left
         while p in node_s.past:
-            new_past_set.append(p)
-            sub_space.node_past[event.event_key(node_s)].remove(event.event_key(p))
-            sub_space.node_future[event.event_key(p)].remove(event.event_key(node_s))
+            if not p.is_gluing_point:
+                new_past_set.append(p)
+                sub_space.node_past[event.event_key(node_s)].remove(event.event_key(p))
+                sub_space.node_future[event.event_key(p)].remove(event.event_key(node_s))
             p = p.left
 
-        new_s.past = new_past_set
+        event.connect_temporal(new_s, past=new_past_set)
         old_past_set = list(set(node_s.past) - set(new_past_set)) + [past_s]
-        node_s.past = old_past_set
+        event.connect_temporal(node_s, past=old_past_set)
         # sub_space.node_future[past].append(new_node)
 
         # face changes
@@ -328,7 +337,7 @@ class SpaceTime(object):
         rightmost_future = n
         while n.right in node_s.future:
             v1 = n
-            n = sub_space.node_right[n]
+            n = n.right
             rightmost_future = n
             new_face = frozenset([v1.key, n.key, node_s.key])
             sub_space.faces.append(new_face)
@@ -360,8 +369,8 @@ class SpaceTime(object):
         sub_space.faces.append(frozenset({left.key, new_s.key, leftmost_past.key}))
         sub_space.face_dilaton[frozenset({left.key, new_s.key, leftmost_past.key})] = -1
 
-        new_s.faces = []
-        node_s.faces = []
+        event.set_faces(new_s, [])
+        event.set_faces(node_s, [])
         self.push(sub_space)
 
     def imove(self, node):
