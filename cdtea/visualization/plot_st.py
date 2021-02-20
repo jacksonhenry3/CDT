@@ -13,7 +13,7 @@ Valuable details
 
 # default styles
 line_settings = {'opacity': 1, 'line': dict(color='rgb(20,20,20)', width=5)}
-mesh_settings = {'opacity': .5}
+mesh_settings = {'opacity': .9}
 
 # display configuration
 no_axis = {'showbackground': False, 'showgrid': False, 'showline': False, 'showticklabels': False, 'ticks': '', 'title': '', 'zeroline': False}
@@ -141,43 +141,33 @@ def plot_3d(st, type="torus", filename=None, get_coords=get_naive_coords, radius
 
 # 2d plot (cutting a space and time slice)
 
-def plot_2d(st, offeset=2 * pi / 600., get_coords=get_naive_coords):
+def plot_2d(st, offset=2 * pi / 600., get_coords=get_naive_coords, labels=False):
     theta_x, theta_t = get_coords(st)
 
-    idx = 0
     coords = {}
-    colors = []
+
     for n in event.events(st, st.nodes):
         v = theta_x[n.key]
         u = theta_t[n.key]
-
         coords[n.key] = (v, u)
-
-        colors.append((len(n.neighbors) - 6))
-        idx += 1
 
     x = [coords[n][0] for n in st.nodes]
     y = [coords[n][1] for n in st.nodes]
 
-    edges1 = []
-
-    # import itertools
-    #
     xx, yy = [], []
     for face in st.faces:
         face = list(face)
         xx, yy = [], []
         if max([abs(theta_t[face[0]] - theta_t[face[1]]), abs(theta_t[face[0]] - theta_t[face[2]])]) < pi:
             if max([abs(theta_x[face[0]] - theta_x[face[1]]), abs(theta_x[face[0]] - theta_x[face[2]])]) < pi:
-                print(face)
                 for n in face:
                     xx.append(theta_x[n])
                     yy.append(theta_t[n])
                 avg_x = np.mean(xx)
                 avg_y = np.mean(yy)
-                xx = [p - (p-avg_x) / 5. for p in xx]
-                yy = [p - (p-avg_y) / 5. for p in yy]
-                plt.fill(xx, yy, c=(1, 0, 0, .1))
+                xx = [p - (p - avg_x) / 2 for p in xx]
+                yy = [p - (p - avg_y) / 2 for p in yy]
+                plt.fill(xx, yy, c=(0, 0, 0, 1))
 
     edges_past_pointing, edges_future_pointing, edges_left_pointing, edges_right_pointing = [], [], [], []
 
@@ -191,8 +181,8 @@ def plot_2d(st, offeset=2 * pi / 600., get_coords=get_naive_coords):
                 if abs(theta_x[e.key] - theta_x[adjacent.key]) < pi:
                     edges_past_pointing.append(
                         [
-                            coords[e.key] + np.array([0, offeset]),
-                            coords[adjacent.key] + np.array([0, offeset]),
+                            coords[e.key] + np.array([0, offset]),
+                            coords[adjacent.key] + np.array([0, offset]),
                         ]
                     )
         for adjacent in e.future:
@@ -200,8 +190,8 @@ def plot_2d(st, offeset=2 * pi / 600., get_coords=get_naive_coords):
                 if abs(theta_x[e.key] - theta_x[adjacent.key]) < pi:
                     edges_future_pointing.append(
                         [
-                            coords[e.key] - np.array([0, offeset]),
-                            coords[adjacent.key] - np.array([0, offeset]),
+                            coords[e.key] - np.array([0, offset]),
+                            coords[adjacent.key] - np.array([0, offset]),
                         ]
                     )
 
@@ -209,8 +199,8 @@ def plot_2d(st, offeset=2 * pi / 600., get_coords=get_naive_coords):
             if abs(theta_x[e.key] - theta_x[e.left.key]) < pi:
                 edges_left_pointing.append(
                     [
-                        coords[e.key] + np.array([0, offeset]),
-                        coords[e.left.key] + np.array([0, offeset]),
+                        coords[e.key] + np.array([0, offset]),
+                        coords[e.left.key] + np.array([0, offset]),
                     ]
                 )
 
@@ -218,8 +208,8 @@ def plot_2d(st, offeset=2 * pi / 600., get_coords=get_naive_coords):
             if abs(theta_x[e.key] - theta_x[e.right.key]) < pi:
                 edges_right_pointing.append(
                     [
-                        coords[e.key] + np.array([0, -offeset]),
-                        coords[e.right.key] + np.array([0, -offeset]),
+                        coords[e.key] + np.array([0, -offset]),
+                        coords[e.right.key] + np.array([0, -offset]),
                     ]
                 )
 
@@ -244,10 +234,12 @@ def plot_2d(st, offeset=2 * pi / 600., get_coords=get_naive_coords):
         )
     )
 
-    plt.scatter(x, y, color="white", zorder=2, s=300, edgecolors="black")
-
-    for n in st.nodes:
-        plt.annotate(n, coords[n], va="center", ha="center", c="black")
+    s = 100
+    if labels == True:
+        for n in st.nodes:
+            plt.annotate(n, coords[n], va="center", ha="center", c="black")
+        s = 600
+    plt.scatter(x, y, color="white", zorder=2, s=s, edgecolors="black")
 
     plt.axis("off")
     plt.show()
