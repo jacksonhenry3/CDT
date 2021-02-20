@@ -8,6 +8,6 @@ dependencies:
   - coverage
   - numpy
   - matplotlib
-  - meshplot
+  - plotly
   - pytest
   - python=3.8
