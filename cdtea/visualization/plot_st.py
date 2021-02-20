@@ -143,25 +143,15 @@ def plot_3d(st, type="torus", filename=None, get_coords=get_naive_coords, radius
 
 def plot_2d(st, offeset=2 * pi / 600., get_coords=get_naive_coords):
     theta_x, theta_t = get_coords(st)
-    #
 
-    c = 3
-    a = 1
     idx = 0
-    idx_to_node = {}
-    node_to_idx = {}
     coords = {}
     colors = []
     for n in event.events(st, st.nodes):
-        idx_to_node[idx] = n.key
-        node_to_idx[n.key] = idx
         v = theta_x[n.key]
         u = theta_t[n.key]
 
-        coords[n.key] = (
-            v,
-            u,
-        )
+        coords[n.key] = (v, u)
 
         colors.append((len(n.neighbors) - 6))
         idx += 1
@@ -171,28 +161,25 @@ def plot_2d(st, offeset=2 * pi / 600., get_coords=get_naive_coords):
 
     edges1 = []
 
-    import itertools
-
+    # import itertools
+    #
+    xx, yy = [], []
     for face in st.faces:
-        for pair in itertools.combinations(face, 2):
-            n1 = pair[0]
-            n2 = pair[1]
-            # doesnt add triangles that span the inside of the cyl
-            if abs(theta_t[n1] - theta_t[n2]) < pi:
-                if abs(theta_x[n1] - theta_x[n2]) < pi:
-                    edges1.append(
-                        [
-                            coords[n1] - np.array([offeset, offeset]),
-                            coords[n2] - np.array([offeset, offeset]),
-                        ]
-                    )
+        face = list(face)
+        xx, yy = [], []
+        if max([abs(theta_t[face[0]] - theta_t[face[1]]), abs(theta_t[face[0]] - theta_t[face[2]])]) < pi:
+            if max([abs(theta_x[face[0]] - theta_x[face[1]]), abs(theta_x[face[0]] - theta_x[face[2]])]) < pi:
+                print(face)
+                for n in face:
+                    xx.append(theta_x[n])
+                    yy.append(theta_t[n])
+                avg_x = np.mean(xx)
+                avg_y = np.mean(yy)
+                xx = [p - (p-avg_x) / 5. for p in xx]
+                yy = [p - (p-avg_y) / 5. for p in yy]
+                plt.fill(xx, yy, c=(1, 0, 0, .1))
 
-    edges2 = []
-
-    edges_past_pointing = []
-    edges_future_pointing = []
-    edges_left_pointing = []
-    edges_right_pointing = []
+    edges_past_pointing, edges_future_pointing, edges_left_pointing, edges_right_pointing = [], [], [], []
 
     for e in event.events(st, st.nodes):
         past_asj = None
@@ -256,22 +243,11 @@ def plot_2d(st, offeset=2 * pi / 600., get_coords=get_naive_coords):
             edges_right_pointing, color=(.5, 0, .5, 1), antialiaseds=True, linewidth=0.6,
         )
     )
-    # plt.gca().add_collection(
-    #     LineCollection(edges2, color=(0, 0, 1, 0.1), antialiaseds=True, linewidth=3)
-    # )
-    # plt.gca().add_collection(
-    #     LineCollection(mismatch, color=(0, 0, 0, 1), antialiaseds=True)
-    # )
+
     plt.scatter(x, y, color="white", zorder=2, s=300, edgecolors="black")
 
-    # for n in st.nodes:
-    #     plt.annotate(
-    #         n, coords[n], backgroundcolor="white", va="center", ha="center",
-    #     )
     for n in st.nodes:
         plt.annotate(n, coords[n], va="center", ha="center", c="black")
-    # plt.legend(
-    #     ("nodes", "Triangles", "node connections"), loc="upper right", shadow=True
-    # )
-    # plt.axis("off")
+
+    plt.axis("off")
     plt.show()
