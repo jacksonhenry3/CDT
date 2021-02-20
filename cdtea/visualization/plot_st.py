@@ -134,7 +134,7 @@ def plot_3d(st, type="torus", filename=None, get_coords=get_naive_coords, radius
     fig = dict(data=data, layout=layout)
 
     if filename:
-        plot(fig, filename="./" + filename + ".html")
+        plot(fig, filename="../plots/" + filename + ".html")
     else:
         iplot(fig)
 
