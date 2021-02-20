@@ -11,22 +11,21 @@ Valuable details
  https://plotly.com/python/reference/mesh3d/
 """
 
+# default styles
+line_settings = {'opacity': 1, 'line': dict(color='rgb(20,20,20)', width=5)}
+mesh_settings = {'opacity': .5}
 
-def plotly_triangular_mesh(nodes, faces, face_color=None, node_color=None, name="", plot_edges=True):
+# display configuration
+no_axis = {'showbackground': False, 'showgrid': False, 'showline': False, 'showticklabels': False, 'ticks': '', 'title': '', 'zeroline': False}
+layout = {'width': 1000, 'height': 1000, 'showlegend': False, 'scene': {'xaxis': no_axis, 'yaxis': no_axis, 'zaxis': no_axis}, 'hovermode': False}
+
+
+def plotly_triangular_mesh(nodes, faces, face_color=None, node_color=None, name="", plot_edges=True, line_set=line_settings, mesh_set=mesh_settings):
     x, y, z = nodes
     i, j, k = faces
 
-    mesh = dict(type='mesh3d',
-                x=x,
-                y=y,
-                z=z,
-                i=i,
-                j=j,
-                k=k,
-                name=name,
-                opacity=.5,
-                hoverinfo='skip'
-                )
+    mesh = {'type': 'mesh3d', 'x': x, 'y': y, 'z': z, 'i': i, 'j': j, 'k': k, 'name': name, 'hoverinfo': 'skip'}
+    mesh = {**mesh, **mesh_set}
     if node_color:
         mesh["vertexcolor"] = node_color
     elif face_color:
@@ -35,27 +34,17 @@ def plotly_triangular_mesh(nodes, faces, face_color=None, node_color=None, name=
     if plot_edges is False:  # the triangle sides are not plotted
         return [mesh]
     else:  # plot edges
-        # define the lists Xe, Ye, Ze, of x, y, resp z coordinates of edge end points for each triangle
-        # None separates data corresponding to two consecutive triangles
-        Xe = []
-        Ye = []
-        Ze = []
+        # define the lists x_e, y_e, z_e, of x, y, and z coordinates of edge end points for each triangle
+        x_e, y_e, z_e = [], [], []
 
         for index in range(len(i)):
-            Xe += [x[i[index]], x[j[index]], x[k[index]], x[i[index]]] + [None]
-            Ye += [y[i[index]], y[j[index]], y[k[index]], y[i[index]]] + [None]
-            Ze += [z[i[index]], z[j[index]], z[k[index]], z[i[index]]] + [None]
-        # define the lines to be plotted
-        lines = dict(type='scatter3d',
-                     x=Xe,
-                     y=Ye,
-                     z=Ze,
-                     mode='lines',
-                     name=name,
-                     opacity=1,
-                     line=dict(color='rgb(20,20,20)', width=5)
+            # None separates data corresponding to two consecutive triangles
+            x_e += [x[i[index]], x[j[index]], x[k[index]], x[i[index]]] + [None]
+            y_e += [y[i[index]], y[j[index]], y[k[index]], y[i[index]]] + [None]
+            z_e += [z[i[index]], z[j[index]], z[k[index]], z[i[index]]] + [None]
 
-                     )
+        lines = {'type': 'scatter3d', 'x': x_e, 'y': y_e, 'z': z_e, 'mode': 'lines', 'name': name}
+        lines = {**lines, **line_set}
 
         return [mesh, lines]
 
@@ -63,7 +52,7 @@ def plotly_triangular_mesh(nodes, faces, face_color=None, node_color=None, name=
 # 3d plots
 
 # color functions
-# BROKEN, idealy prmpts some change to space-time
+# BROKEN, idealy prompts some change to space-time
 def face_color_time_direction(face):
     import statistics
     T = len(st.get_layers())
@@ -130,7 +119,7 @@ def plot_3d(st, type="torus", filename=None, get_coords=get_naive_coords, radius
         face = list(face)
 
         # doesn't draw any triangles that would stretch across two time slices. This removes the middle triangles connecting the top to the bottom
-        #needs more info from space time to find triangle orientation, should this be stored in each triangle?
+        # needs more info from space time to find triangle orientation, should this be stored in each triangle?
         # if type == "cylinder" and abs(mode - outlier) > 2 * pi / T * 2:
         #     continue
 
@@ -141,32 +130,7 @@ def plot_3d(st, type="torus", filename=None, get_coords=get_naive_coords, radius
     # generate the mesh
     data = plotly_triangular_mesh((x, y, z), (i, j, k), face_color=face_color, node_color=node_color, name=filename, plot_edges=plot_edges)
 
-    # display configuration
-    noaxis = dict(
-        showbackground=False,
-        showgrid=False,
-        showline=False,
-        showticklabels=False,
-        ticks='',
-        title='',
-        zeroline=False)
-
-    layout = dict(
-        # title="Mesh 3d intensity test",
-        width=1000,
-        height=1000,
-        showlegend=False,
-        title=filename,
-        scene=dict(xaxis=noaxis,
-                   yaxis=noaxis,
-                   zaxis=noaxis,
-                   # camera=dict(eye=dict(x=1.55, y=-1.55, z=1.55)),
-                   ),
-
-        hovermode=False,
-
-    )
-
+    layout["title"] = filename
     fig = dict(data=data, layout=layout)
 
     if filename:
@@ -177,8 +141,8 @@ def plot_3d(st, type="torus", filename=None, get_coords=get_naive_coords, radius
 
 # 2d plot (cutting a space and time slice)
 
-def plot_2d(st, offeset=2 * pi / 600.):
-    theta_x, theta_t = get_average_coords(st)
+def plot_2d(st, offeset=2 * pi / 600., get_coords=get_naive_coords):
+    theta_x, theta_t = get_coords(st)
     #
 
     c = 3
