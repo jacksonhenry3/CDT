@@ -9,30 +9,33 @@ from cdtea.event import Event
 
 
 class SpaceTime(object):
-    """docstring for SpaceTime."""
+    """SpaceTime represents a collection of linked events. The structure of those
+    links, both spacelike and timelike, determines the geometry of the piecewise
+    linear manifold represented by the SpaceTime.
+    """
 
-    # __slots__ = []
-
-    def __init__(self, closed: bool = True):
+    def __init__(self, nodes: set = None, node_left: dict = None, node_right: dict = None,
+                 node_past: dict = None, node_future: dict = None, faces_containing: dict = None,
+                 faces: set = None, face_dilation: dict = None, face_x: dict = None,
+                 face_t: dict = None, dead_references: set = None, closed: bool = True):
         super(SpaceTime, self).__init__()
         self.closed = closed
 
         # consider adding curvature here aswell
-        self.nodes = []  # nodes is just a list of indicies
-        self.node_left = {}  # a dict with node indices as keys
-        self.node_right = {}  # a dict with node indices as keys
-        self.node_past = {}  # a dict with node indices as keys
-        self.node_future = {}  # a dict with node indices as keys
-        self.faces_containing = {}
+        self.nodes = set() if nodes is None else nodes  # nodes is just a list of indicies
+        self.node_left = {} if node_left is None else node_left  # a dict with node indices as keys
+        self.node_right = {} if node_right is None else node_right  # a dict with node indices as keys
+        self.node_past = {} if node_past is None else node_past  # a dict with node indices as keys
+        self.node_future = {} if node_future is None else node_future  # a dict with node indices as keys
+        self.faces_containing = {} if faces_containing is None else faces_containing
 
-        self.faces = []  # faces is a frozenset of node indices
-        self.face_dilaton = {}  # a dict with keys of face tuples and field vals
-        self.face_x = {}  # a dict with keys of face tuples space-like connected
-        self.face_t = {}  # a dict with keys of face tuples time-like connected
+        self.faces = set() if faces is None else faces  # faces is a frozenset of node indices
+        self.face_dilaton = {} if face_dilation is None else face_dilation # a dict with keys of face tuples and field vals
+        self.face_x = {} if face_x is None else face_x  # a dict with keys of face tuples space-like connected
+        self.face_t = {} if face_t is None else face_t # a dict with keys of face tuples time-like connected
 
         # This could be modified to include a list of dead references
-        self.dead_references = []
-
+        self.dead_references = set() if dead_references is None else dead_references
 
     def __eq__(self, other):
         """Equivalence between """
@@ -45,13 +48,17 @@ class SpaceTime(object):
     def max_node(self):
         return max(self.nodes)
 
+    @property
+    def ordered_nodes(self) -> list:
+        return list(sorted(self.nodes))
+
     def get_random_node(self):
         return event.Event(self, random.choice(self.nodes))
 
     def get_layers(self, n=False):
         """returns a list of lists where each list contains all nodes in a specific layer, contains all nodes """
         if not n:
-            n = self.nodes[0]
+            n = self.ordered_nodes[0]
         used = []
         layers = []
         layer = []
@@ -72,7 +79,7 @@ class SpaceTime(object):
         else:
             if n in self.nodes:
                 raise ValueError('Cannot add node {:d} to spacetime {}, already exists'.format(n, self))
-        self.nodes.append(n)
+        self.nodes.add(n)
         self.node_left[n] = None
         self.node_right[n] = None
         self.node_future[n] = []
@@ -111,12 +118,12 @@ class SpaceTime(object):
         # removes duplicates
         faces = list(set(faces))
         nodes = list(set(nodes))
-        self.dead_references = nodes.copy()  # i.e these nodes are no longer in the st
+        self.dead_references = set(nodes.copy())  # i.e these nodes are no longer in the st
 
         # set the sub_space nodes and faces
         for n in nodes:
             sub_space.add_node(n=event.event_key(n))
-        sub_space.faces = faces.copy()
+        sub_space.faces = set(faces.copy())
 
         # loop through all removed nodes and remove their properties from self and add them to sub_space
         # taking care to label gluing points (references to nodes that do not belong to sub_space)
@@ -158,7 +165,7 @@ class SpaceTime(object):
             # raise ValueError()
 
         # add a check to make sure that we are inserting unique new nodes
-        nodes = sub_space.nodes
+        nodes = sub_space.ordered_nodes
         faces = sub_space.faces
 
         for n in nodes:
@@ -172,7 +179,7 @@ class SpaceTime(object):
             event.set_faces(n, n_s.faces)
 
         for f in faces:
-            self.faces.append(f)
+            self.faces.add(f)
 
         for f in sub_space.faces:
             self.face_dilaton[f] = sub_space.face_dilaton[f]
@@ -193,7 +200,7 @@ def generate_flat_spacetime(space_size: int, time_size: int):
     for t in range(time_size):
         start = index  # the first index in the current time slice
         for x in range(space_size):
-            spacetime.nodes.append(index)
+            spacetime.add_node(index)
 
             left = start + (index - 1) % space_size
             right = start + (index + 1) % space_size
@@ -221,8 +228,8 @@ def generate_flat_spacetime(space_size: int, time_size: int):
             f1 = frozenset({index, right, future_right})
             f2 = frozenset({index, left, past_left})
 
-            spacetime.faces.append(f1)
-            spacetime.faces.append(f2)
+            spacetime.faces.add(f1)
+            spacetime.faces.add(f2)
 
             # This is where we chose the initial dilaton values for each simplex
             spacetime.face_dilaton[f1] = 1
