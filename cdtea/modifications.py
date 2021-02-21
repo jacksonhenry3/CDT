@@ -20,7 +20,7 @@ def move(st, node, future, past):
     sub_space.add_node(new_node_num)
 
     # create a node object for easy manipulation. This also automatically adds the node to the sub_space
-    new_s = event.Event(sub_space, st.max_node + 1)
+    new_s = event.Event(sub_space, new_node_num)
     node_s = event.Event(sub_space, node)
     left_s = event.Event(sub_space, node_s.left)
     left = node_s.left
@@ -89,7 +89,7 @@ def move(st, node, future, past):
     rightmost_future = n
     while n.right in node_s.future:
         v1 = n
-        n = sub_space.node_right[n]
+        n = n.right
         rightmost_future = n
         new_face = frozenset([v1.key, n.key, node_s.key])
         sub_space.faces.append(new_face)
