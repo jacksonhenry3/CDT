@@ -64,7 +64,7 @@ class SpaceTime(object):
         return list(sorted(self.nodes))
 
     def get_random_node(self):
-        return event.Event(self, random.choice(self.nodes))
+        return event.Event(self, random.choice(self.ordered_nodes))
 
     def get_layers(self, n=False):
         """returns a list of lists where each list contains all nodes in a specific layer, contains all nodes """
