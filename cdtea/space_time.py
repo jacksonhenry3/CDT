@@ -5,6 +5,9 @@ import pathlib
 import pickle
 import random
 import typing
+
+import networkx
+
 from cdtea import event
 from cdtea.event import Event
 
@@ -235,6 +238,29 @@ class SpaceTime(object):
         path = path if isinstance(path, pathlib.Path) else pathlib.Path(path)
         with open(path.as_posix(), 'wb') as fid:
             pickle.dump(self, file=fid)
+
+    def to_networkx(self):
+        """Convert a SpaceTime to a networkx Graph object, with edge attributes
+        describing the type of edge, either 'spacelike' or 'timelike'
+
+        Returns:
+            networkx.Graph
+        """
+        G = networkx.Graph()
+        G.add_nodes_from(self.ordered_nodes)
+        edge_types = {}
+        for n in self.ordered_nodes:
+            for s in (self.node_left[n], self.node_right[n]):
+                key = (n, s) if n < s else (s, n)
+                if key not in edge_types:
+                    edge_types[key] = {'type': 'spacelike'}
+            for t in self.node_past[n] + self.node_future[n]:
+                key = (n, t) if n < t else (t, n)
+                if key not in edge_types:
+                    edge_types[key] = {'type': 'timelike'}
+        G.add_edges_from(list(edge_types.keys()))
+        networkx.set_edge_attributes(G, edge_types)
+        return G
 
     @staticmethod
     def from_dict(config_dict: dict):

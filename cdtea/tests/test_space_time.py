@@ -3,6 +3,7 @@ import os
 import pathlib
 import tempfile
 
+import networkx
 import pytest
 
 from cdtea import event, modifications, space_time
@@ -131,3 +132,9 @@ class TestSpaceTimeSerialize:
             st_loaded = SpaceTime.from_pickle(path=path)
             assert isinstance(st_loaded, SpaceTime)
             assert st_loaded == st
+
+    def test_to_networkx(self):
+        """Test conversion to networkx"""
+        st = dummy_space_time(2, 2)
+        G = st.to_networkx()
+        assert isinstance(G, networkx.Graph)
