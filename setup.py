@@ -21,7 +21,7 @@ setuptools.setup(name='cdtea',
                  install_requires=[
                      'matplotlib',
                      'numpy',
-                     'meshplot',
+                     'plotly',
                  ],
                  classifiers=[
                      "Programming Language :: Python",

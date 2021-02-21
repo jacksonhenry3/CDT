@@ -1,6 +1,6 @@
 import random
 
-from cdtea import display
+from cdtea.visualization import plot_st
 from cdtea.space_time import SpaceTime
 from cdtea.space_time import generate_flat_spacetime
 from cdtea.modifications import move,imove
@@ -25,7 +25,7 @@ def main():
     # FST.imove(n)
     print("plottin")
     # display.get_naive_coords(FST)
-    display.plot_2d(FST)
+    plot_st.plot_3d(FST,type = "cylinder")
 
 
 if __name__ == '__main__':  # import shielding
