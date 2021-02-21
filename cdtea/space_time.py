@@ -246,8 +246,19 @@ class SpaceTime(object):
         Returns:
             networkx.Graph
         """
-        G = networkx.Graph()
+        # Construct initial graph
+        layers = self.get_layers()
+        G = networkx.Graph(num_layers=len(layers))
         G.add_nodes_from(self.ordered_nodes)
+
+        # Add information about node layers
+        layers_dict = {}
+        for n, layer in enumerate(layers):
+            for node in layer:
+                layers_dict[node] = {'layer': n}
+        networkx.set_node_attributes(G, layers_dict)
+
+        # Add information about edge types
         edge_types = {}
         for n in self.ordered_nodes:
             for s in (self.node_left[n], self.node_right[n]):
