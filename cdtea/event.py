@@ -315,6 +315,9 @@ def connect_temporal(present: Event, past: typing.List[Event] = None, future: ty
     for attr, value in zip((PassThruAttr.Past, PassThruAttr.Future), (past, future)):
         dual_attr = EDGE_CONSISTENCY_ATTR_DUALS_DICT[attr]
         if value is not None:
+            # ensure unique
+            value = list(set(value))
+
             # Set new value and keep track of original
             original = getattr(present, attr)
             getattr(present.space_time, PASS_THRU_ATTR_MAP[attr])[present.key] = [v.key for v in coerce_gluing_point(present.space_time, value)]
