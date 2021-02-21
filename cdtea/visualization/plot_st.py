@@ -1,7 +1,11 @@
+import networkx
 import plotly.graph_objects as go
 from matplotlib.collections import LineCollection
 import random
+
+from cdtea.space_time import SpaceTime
 from cdtea.visualization.coordinates import *
+from plotly import graph_objects
 from plotly.offline import iplot, plot
 import matplotlib.pyplot as plt
 
@@ -18,6 +22,11 @@ mesh_settings = {'opacity': .9}
 # display configuration
 no_axis = {'showbackground': False, 'showgrid': False, 'showline': False, 'showticklabels': False, 'ticks': '', 'title': '', 'zeroline': False}
 layout = {'width': 1000, 'height': 1000, 'showlegend': False, 'scene': {'xaxis': no_axis, 'yaxis': no_axis, 'zaxis': no_axis}, 'hovermode': False}
+
+EDGE_TYPE_COLOR = {
+    'spacelike': '#ff0000',
+    'timelike': '#0000ff',
+}
 
 
 def plotly_triangular_mesh(nodes, faces, face_color=None, node_color=None, name="", plot_edges=True, line_set=line_settings, mesh_set=mesh_settings):
@@ -243,3 +252,100 @@ def plot_2d(st, offset=2 * pi / 600., get_coords=get_naive_coords, labels=False)
 
     plt.axis("off")
     plt.show()
+
+
+def plot_3d_nx(st: SpaceTime, render: bool = True, iterations: int = 50, layout_type: str = 'spring'):
+    G = st.to_networkx()
+    if layout_type == 'spring':
+        layout = networkx.spring_layout(G, iterations=iterations, dim=3)
+    elif layout_type == 'spectral':
+        layout = networkx.spectral_layout(G, dim=3)
+    else:
+        raise ValueError('Unknown layout type: {}'.format(layout_type))
+
+    edges = G.edges()
+    spacelike_edges = [e for e in edges if G.get_edge_data(e[0], e[1])['type'] == 'spacelike']
+    timelike_edges = [e for e in edges if G.get_edge_data(e[0], e[1])['type'] == 'timelike']
+
+    spacelike_edge_x = []
+    spacelike_edge_y = []
+    spacelike_edge_z = []
+    for edge in spacelike_edges:
+        x0, y0, z0 = layout[edge[0]]
+        x1, y1, z1 = layout[edge[1]]
+        spacelike_edge_x.extend([x0, x1, None])
+        spacelike_edge_y.extend([y0, y1, None])
+        spacelike_edge_z.extend([z0, z1, None])
+
+    timelike_edge_x = []
+    timelike_edge_y = []
+    timelike_edge_z = []
+    for edge in timelike_edges:
+        x0, y0, z0 = layout[edge[0]]
+        x1, y1, z1 = layout[edge[1]]
+        timelike_edge_x.extend([x0, x1, None])
+        timelike_edge_y.extend([y0, y1, None])
+        timelike_edge_z.extend([z0, z1, None])
+
+    spacelike_edge_trace = graph_objects.Scatter3d(
+        x=spacelike_edge_x, y=spacelike_edge_y, z=spacelike_edge_z,
+        line=dict(width=0.5, color=EDGE_TYPE_COLOR['spacelike']),
+        hoverinfo='none',
+        mode='lines')
+
+    timelike_edge_trace = graph_objects.Scatter3d(
+        x=timelike_edge_x, y=timelike_edge_y, z=timelike_edge_z,
+        line=dict(width=0.5, color=EDGE_TYPE_COLOR['timelike']),
+        hoverinfo='none',
+        mode='lines')
+
+    node_x = []
+    node_y = []
+    node_z = []
+    for node in G.nodes():
+        x, y, z = layout[node]
+        node_x.append(x)
+        node_y.append(y)
+        node_z.append(z)
+
+    layer_dict = networkx.get_node_attributes(G, 'layer')
+    node_trace = graph_objects.Scatter3d(
+        x=node_x, y=node_y, z=node_z,
+        mode='markers',
+        marker=dict(
+            # showscale=True,
+            # colorscale options
+            #'Greys' | 'YlGnBu' | 'Greens' | 'YlOrRd' | 'Bluered' | 'RdBu' |
+            #'Reds' | 'Blues' | 'Picnic' | 'Rainbow' | 'Portland' | 'Jet' |
+            #'Hot' | 'Blackbody' | 'Earth' | 'Electric' | 'Viridis' |
+            colorscale='Viridis',
+            # reversescale=True,
+            color=[layer_dict[n] for n in G.nodes()],
+            size=3,
+            opacity=0.8,
+            colorbar=dict(
+                thickness=150,
+                title='Time Layer',
+                xanchor='left',
+                titleside='right'
+            )
+            ))
+
+    fig = graph_objects.Figure(data=[spacelike_edge_trace, timelike_edge_trace, node_trace],
+                    layout=go.Layout(
+                        title='CDT Visualization',
+                        titlefont_size=16,
+                        # showlegend=False,
+                        hovermode='closest',
+                        margin=dict(b=20,l=5,r=5,t=40),
+                        # annotations=[ dict(
+                        #     text="Python code: <a href='https://plotly.com/ipython-notebooks/network-graphs/'> https://plotly.com/ipython-notebooks/network-graphs/</a>",
+                        #     showarrow=False,
+                        #     xref="paper", yref="paper",
+                        #     x=0.005, y=-0.002 ) ],
+                        # xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+                        # yaxis=dict(showgrid=False, zeroline=False, showticklabels=False)
+                    )
+                    )
+    if render:
+        fig.show()
