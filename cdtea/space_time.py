@@ -1,7 +1,8 @@
 """
 Trying to use node and face NOT vertex and simplex
 """
-
+import pathlib
+import pickle
 import random
 import typing
 from cdtea import event
@@ -218,6 +219,23 @@ class SpaceTime(object):
             'dead_references': self.dead_references,
         }
 
+    def to_pickle(self, path: typing.Union[str, pathlib.Path] = None):
+        """Convert SpaceTime to pickle format
+
+        Args:
+            path:
+                str or Path, default None. If specified write out the pickle to this location
+
+        Returns:
+            bytes, if output_path is None
+        """
+        if path is None:
+            return pickle.dumps(self)
+
+        path = path if isinstance(path, pathlib.Path) else pathlib.Path(path)
+        with open(path.as_posix(), 'wb') as fid:
+            pickle.dump(self, file=fid)
+
     @staticmethod
     def from_dict(config_dict: dict):
         """Create a SpaceTime object from a configuration dict
@@ -234,6 +252,29 @@ class SpaceTime(object):
             if key not in config_dict:
                 raise SerializationError('Missing key {} when attempting to create SpaceTime from dict:\n{}'.format(key, str(config_dict)))
         return SpaceTime(**config_dict)  # pass-thru to init method
+
+    @staticmethod
+    def from_pickle(data: bytes = None, path: typing.Union[str, pathlib.Path] = None):
+        """Create a SpaceTime object from a pickle string or file
+
+        Args:
+            data:
+                str, default None. If specified use this pickle string
+            path:
+                str or Path, default None. If specified use this full path
+
+        Returns:
+            SpaceTime
+        """
+        if (data is None and path is None) or (data is not None and path is not None):
+            raise SerializationError('Must specify only one of source and path when loading SpaceTime from pickle')
+
+        if data is not None:
+            return pickle.loads(data)
+
+        path = path if isinstance(path, pathlib.Path) else pathlib.path(path)
+        with open(path.as_posix(), 'rb') as fid:
+            return pickle.load(fid)
 
 
 def generate_flat_spacetime(space_size: int, time_size: int):
