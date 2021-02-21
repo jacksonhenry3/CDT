@@ -134,33 +134,15 @@ def imove(st, node):
     left_s = event.Event(sub_space, left.key)
     node_s = event.Event(sub_space, node.key)
 
-    new_future = left_s.future
-    new_past = left_s.past
+    new_future = list(set(left_s.future).union(node_s.future))
+    new_past = list(set(left_s.past).union(node_s.past))
     new_left = left_s.left
 
-    # once event has symmetric behavior this can be simplified
-    for f in new_future:
-        sub_space.node_past[f.key].remove(left.key)
-        if f not in sub_space.node_future[node.key]:
-            sub_space.node_future[node.key].append(f.key)
-            sub_space.node_past[f.key].append(node.key)
+    event.connect_spatial(new_left, node_s)
+    event.connect_temporal(node_s, past=new_past, future=new_future)
+    event.connect_temporal(left_s, past=[], future=[])
 
-    for p in new_past:
-        sub_space.node_future[p.key].remove(left.key)
-        if p not in sub_space.node_past[node.key]:
-            sub_space.node_past[node.key].append(p.key)
-            sub_space.node_future[p.key].append(node.key)
-
-    sub_space.node_left[node.key] = new_left.key
-    sub_space.node_right[new_left.key] = node.key
-
-    sub_space.nodes.remove(left.key)
-    del sub_space.node_left[left.key]
-    del sub_space.node_right[left.key]
-    del sub_space.node_past[left.key]
-    del sub_space.node_future[left.key]
-    del sub_space.faces_containing[left.key]
-
+    sub_space.remove_node(left_s)
     faces = sub_space.get_faces_containing(left.key)
 
     sub_space.faces = [x for x in sub_space.faces if x not in faces]
