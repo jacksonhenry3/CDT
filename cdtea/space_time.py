@@ -8,6 +8,14 @@ from cdtea import event
 from cdtea.event import Event
 
 
+class SpaceTimeError(ValueError):
+    """Base class for error types"""
+
+
+class SerializationError(SpaceTimeError):
+    """Error class related to serialization"""
+
+
 class SpaceTime(object):
     """SpaceTime represents a collection of linked events. The structure of those
     links, both spacelike and timelike, determines the geometry of the piecewise
@@ -30,9 +38,9 @@ class SpaceTime(object):
         self.faces_containing = {} if faces_containing is None else faces_containing
 
         self.faces = set() if faces is None else faces  # faces is a frozenset of node indices
-        self.face_dilaton = {} if face_dilation is None else face_dilation # a dict with keys of face tuples and field vals
+        self.face_dilaton = {} if face_dilation is None else face_dilation  # a dict with keys of face tuples and field vals
         self.face_x = {} if face_x is None else face_x  # a dict with keys of face tuples space-like connected
-        self.face_t = {} if face_t is None else face_t # a dict with keys of face tuples time-like connected
+        self.face_t = {} if face_t is None else face_t  # a dict with keys of face tuples time-like connected
 
         # This could be modified to include a list of dead references
         self.dead_references = set() if dead_references is None else dead_references
@@ -41,8 +49,7 @@ class SpaceTime(object):
         """Equivalence between """
         if not isinstance(other, SpaceTime):
             return False
-        # TODO add checking of edges and faces
-        return self.nodes == other.nodes
+        return self.to_dict() == other.to_dict()
 
     @property
     def max_node(self):
@@ -189,6 +196,44 @@ class SpaceTime(object):
         # This should probably be validated
         self.dead_nodes = []
         # Can we get rid of sub_space at this point somehow?
+
+    def to_dict(self):
+        """Convert a SpaceTime object to a dict containing all the configuration information
+
+        Returns:
+            dict, with all attributes of the SpaceTime
+        """
+        return {
+            'closed': self.closed,
+            'nodes': self.nodes,
+            'node_left': self.node_left,
+            'node_right': self.node_right,
+            'node_past': self.node_past,
+            'node_future': self.node_future,
+            'faces_containing': self.faces_containing,
+            'faces': self.faces,
+            'face_dilation': self.face_dilaton,
+            'face_x': self.face_x,
+            'face_t': self.face_t,
+            'dead_references': self.dead_references,
+        }
+
+    @staticmethod
+    def from_dict(config_dict: dict):
+        """Create a SpaceTime object from a configuration dict
+
+        Args:
+            config_dict:
+                dict, the configuration dictionary, MUST have all keys:
+
+        Returns:
+            SpaceTime, the reserialized SpaceTime object
+        """
+        for key in ('closed', 'nodes', 'node_left', 'node_right', 'node_past', 'node_future',
+                    'faces_containing', 'faces', 'face_dilation', 'face_x', 'face_t', 'dead_references'):
+            if key not in config_dict:
+                raise SerializationError('Missing key {} when attempting to create SpaceTime from dict:\n{}'.format(key, str(config_dict)))
+        return SpaceTime(**config_dict)  # pass-thru to init method
 
 
 def generate_flat_spacetime(space_size: int, time_size: int):
