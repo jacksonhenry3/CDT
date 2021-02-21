@@ -6,8 +6,10 @@ channels:
 
 dependencies:
   - coverage
-  - numpy
   - matplotlib
+  - networkx
+  - numpy
   - plotly
   - pytest
   - python=3.8
+  - scipy
