@@ -16,7 +16,7 @@ def move(st, node, future, past):
     past_s = event.Event(sub_space, past)
 
     # increment the total node counter
-    new_node_num = max(st.nodes + sub_space.nodes) + 1
+    new_node_num = max(st.nodes.union(sub_space.nodes)) + 1
     sub_space.add_node(new_node_num)
 
     # create a node object for easy manipulation. This also automatically adds the node to the sub_space
