@@ -14,6 +14,14 @@ class TestModifications:
         modifications.move(dst, n, f, p)
         assert isinstance(dst, SpaceTime)
 
+    def test_multiple_moves(self):
+        dst = dummy_space_time(4, 4)
+        n1, f1, p1 = event.events(dst, [12, 0, 11])
+        modifications.move(dst, n1, f1, p1)
+        n2, f2, p2 = event.events(dst, [13, 1, 9])
+        modifications.move(dst, n2, f2, p2)
+        assert isinstance(dst, SpaceTime)
+
     def test_imove(self):
         """Test inverse move"""
         dst = dummy_space_time(4, 4)
