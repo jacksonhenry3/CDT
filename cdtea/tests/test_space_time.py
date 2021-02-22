@@ -17,14 +17,44 @@ def dummy_space_time(spatial_size: int = 2, temporal_size: int = 1):
     return st
 
 
-class TestSpaceTime:
-    """Test SpaceTime classes"""
+def find_duplicate_temporal_connections(st: SpaceTime):
+    """Utility for finding duplicate temporal connections"""
+    duplicates = []
+    for n in st.ordered_nodes:
+        future = st.node_future[n]
+        past = st.node_past[n]
+        if len(set(future)) < len(future):  # future has dups
+            duplicates.append((n, 'future', future))
+
+        if len(set(past)) < len(past):  # future has dups
+            duplicates.append((n, 'past', past))
+
+    return duplicates if duplicates != [] else None
+
+
+class TestTestingUtils:
+    """Tests for the helper test functions"""
 
     def test_dummy_space_time(self):
         """Coverage ftw"""
         dst = dummy_space_time()
         assert isinstance(dst, SpaceTime)
         assert len(dst.nodes) == 2
+
+    def test_find_duplicate_temp_conn(self):
+        """Test duplicate connection finder"""
+        valid_cdt = space_time.generate_flat_spacetime(10, 10)
+        invalid_cdt = space_time.generate_flat_spacetime(10, 10)
+        invalid_cdt.node_future[0] = [10, 19, 19]
+        valid_dups = find_duplicate_temporal_connections(valid_cdt)
+        assert valid_dups is None
+        invalid_dups = find_duplicate_temporal_connections(invalid_cdt)
+        assert invalid_dups is not None
+        assert invalid_dups == [(0, 'future', [10, 19, 19])]
+
+
+class TestSpaceTime:
+    """Test SpaceTime classes"""
 
     def test_pop(self):
         dst = dummy_space_time(3, 3)
@@ -49,6 +79,14 @@ class TestSpaceTime:
         e4 = event.Event(dst, 4)
         sub_dst = dst.pop([e4])
         assert dst != dst_2
+
+    def test_pop_push_unique(self):
+        """Test for temporal connection uniqueness, based on Jackson's repro 2021-02-21"""
+        st = space_time.generate_flat_spacetime(10, 10)
+        node = event.Event(st, 13)
+        st.push(st.pop([node]))
+        dups = find_duplicate_temporal_connections(st)
+        assert dups is None
 
 
 class TestSpaceTimeSerialize:
