@@ -9,6 +9,7 @@ dependencies:
   - matplotlib
   - networkx
   - numpy
+  - pandas
   - plotly
   - pytest
   - python=3.8
