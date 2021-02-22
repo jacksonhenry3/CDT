@@ -144,6 +144,10 @@ class TestEdgeConsistency:
         event.set_faces(e0, [frozenset({0, 1, 3})])
         assert e0.faces == [frozenset({0, 1, 3})]
 
+    def test_temporal_connection_unique(self):
+        assert {4, 4} == {4}  # This is how sets remove dups
+        assert {4, event.GluingPoint(4)} == {4}  # confirm that Gluinpoint doesn't affect uniqueness
+
 
 class TestEventUtilities:
     """Test utility functions in event module"""
