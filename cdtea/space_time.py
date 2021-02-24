@@ -1,6 +1,7 @@
 """
 Trying to use node and face NOT vertex and simplex
 """
+import copy
 import pathlib
 import pickle
 import random
@@ -25,8 +26,9 @@ class SpaceTime(object):
     links, both spacelike and timelike, determines the geometry of the piecewise
     linear manifold represented by the SpaceTime.
     """
-    __slots__ = ('closed', 'nodes', 'node_left', 'node_right', 'node_past', 'node_future', 'faces_containing',
-                 'faces', 'face_dilaton', 'face_x', 'face_t')
+    _NON_SERIALIZABLE_ATTRIBUTES = ('_ordered_nodes',)
+    _SERIALIZABLE_ATTRIBUTES = ('closed', 'nodes', 'node_left', 'node_right', 'node_past', 'node_future', 'faces_containing', 'faces', 'face_dilaton', 'face_x', 'face_t')
+    __slots__ = _NON_SERIALIZABLE_ATTRIBUTES + _SERIALIZABLE_ATTRIBUTES
 
     def __init__(self, nodes: set = None, node_left: dict = None, node_right: dict = None,
                  node_past: dict = None, node_future: dict = None, faces_containing: dict = None,
@@ -48,6 +50,9 @@ class SpaceTime(object):
         self.face_x = {} if face_x is None else face_x  # a dict with keys of face tuples space-like connected
         self.face_t = {} if face_t is None else face_t  # a dict with keys of face tuples time-like connected
 
+        # stateful cache attributes (performance)
+        self._ordered_nodes = None
+
     def __eq__(self, other):
         """Equivalence between """
         if not isinstance(other, SpaceTime):
@@ -57,19 +62,25 @@ class SpaceTime(object):
     def __repr__(self):
         return 'ST({:d}, {:d})'.format(len(self.nodes), len(self.faces))
 
+    def copy(self):
+        """Deepcopy of this SpaceTime"""
+        return SpaceTime.from_dict(copy.deepcopy(self.to_dict()))
+
     @property
     def max_node(self):
         return max(self.nodes)
 
     @property
     def ordered_nodes(self) -> list:
-        return list(sorted(self.nodes))
+        if self._ordered_nodes is None:
+            self._ordered_nodes = list(sorted(self.nodes))
+        return self._ordered_nodes
 
     @property
     def gluing_edges(self) -> typing.List[typing.Tuple[int, str, event.GluingPoint]]:
         """Find and return all references to gluing points"""
         edges = []
-        for n in self.ordered_nodes:
+        for n in self.nodes:
             if isinstance(self.node_left[n], event.GluingPoint):
                 edges.append((n, event.PassThruAttr.Left, self.node_left[n]))
             if isinstance(self.node_right[n], event.GluingPoint):
@@ -115,24 +126,23 @@ class SpaceTime(object):
         self.node_future[n] = set()
         self.node_past[n] = set()
         self.faces_containing[n] = set()
+        self._ordered_nodes = None
 
     def remove_node(self, n: int):
         """Function for removing node"""
-        n = event.event_key(n)
         self.nodes.remove(n)
         self.node_left.pop(n)
         self.node_right.pop(n)
         self.node_future.pop(n)
         self.node_past.pop(n)
         self.faces_containing.pop(n)
-
-        # self.
+        self._ordered_nodes = None
 
     # TODO Made redundant by faces_containing dict, remove once fully validated
     def get_faces_containing(self, n: Event):
         # get all simplices that contain a particular vertex
         # TODO add "Face" pass-thru abstraction?
-        return {face for face in self.faces if event.event_key(n) in face}
+        return {face for face in self.faces if n.key in face}
 
     def pop(self, node_list: typing.List[Event]):
         """
@@ -153,7 +163,7 @@ class SpaceTime(object):
 
         # set the sub_space nodes and faces
         for n in nodes:
-            sub_space.add_node(n=event.event_key(n))
+            sub_space.add_node(n=n.key)
         sub_space.faces = set(faces.copy())
 
         # loop through all removed nodes and remove their properties from self and add them to sub_space

@@ -152,13 +152,6 @@ class TestEdgeConsistency:
 class TestEventUtilities:
     """Test utility functions in event module"""
 
-    def test_event_key(self):
-        """Test event_key coercion function"""
-        dst = space_time.generate_flat_spacetime(2, 2)
-        e0, _ = event.events(dst, [0, 1])
-        assert event.event_key(e0) == 0
-        assert event.event_key(0) == 0
-
     def test_events(self):
         """Test multiple event constructor utility"""
         dst = space_time.generate_flat_spacetime(2, 2)

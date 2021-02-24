@@ -190,19 +190,6 @@ class Event:
         return self.past.union(self.future)
 
 
-def event_key(e: typing.Union[Event, int]) -> int:
-    """Small utility function for coercing Event instances to their SpaceTime keys
-
-    Args:
-        e:
-            Event or int, the event to coerce into a key (if necessary)
-
-    Returns:
-        int, the coerced event key
-    """
-    return e.key if isinstance(e, Event) else e
-
-
 def events(space_time, keys: typing.Union[int, typing.Iterable[int]] = None) -> typing.Union[Event, typing.List[Event]]:
     """Helper function for creating multiple Event instances from an iterable
     of SpaceTime keys

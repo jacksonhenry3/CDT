@@ -85,8 +85,8 @@ def node_diff(st1: SpaceTime, st2: SpaceTime, display_results: bool = False):
 def face_diff(st1: SpaceTime, st2: SpaceTime, display_results: bool = False):
     """Collect difference between shared faces in two spacetimes"""
     common_faces = st1.faces.intersection(st2.faces)
-    unique_faces_1 = set(n for n in st1.faces if n not in common_faces)
-    unique_faces_2 = set(n for n in st2.faces if n not in common_faces)
+    unique_faces_1 = st1.faces.difference(common_faces) # set(n for n in st1.faces if n not in common_faces)
+    unique_faces_2 = st2.faces.difference(common_faces) # set(n for n in st2.faces if n not in common_faces)
     diffs = []
     for n in common_faces:
         if st1.face_x[n] != st2.face_x[n]:
@@ -133,16 +133,19 @@ def degree(st: SpaceTime) -> DegreeSummary:
     for n in st.ordered_nodes:
         left = st.node_left[n]
         right = st.node_right[n]
-        past = st.node_left[n]
+        past = st.node_past[n]
         future = st.node_future[n]
 
         if not isinstance(left, int):
             nodes_missing.append((n, 'left', str(left)))
         if not isinstance(right, int):
             nodes_missing.append((n, 'right', str(right)))
-        if all(not isinstance(p, int) for p in past):
+        if not isinstance(past, set) or all(not isinstance(p, int) for p in past):
             nodes_missing.append((n, 'past', str(past)))
-        if all(not isinstance(f, int) for f in future):
+        if not isinstance(future, set) or all(not isinstance(f, int) for f in future):
             nodes_missing.append((n, 'future', str(future)))
+
+        d = len([x for x in ([left, right] + ([past] if not isinstance(past, set) else list(past)) + ([future] if not isinstance(future, set) else list(future))) if isinstance(x, int)])
+        nodes_by_degree[d].append(n)
     nodes_missing = pandas.DataFrame(data=nodes_missing, columns=['Node', 'Type', 'Value'])
     return DegreeSummary(degree=nodes_by_degree, missing=nodes_missing)

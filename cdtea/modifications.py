@@ -32,33 +32,29 @@ def move(st, node, future, past):
 
     # future changes
     # TODO examine algorithm concept of connection vs Spacetime (e.g. after popping a node out, what does asking for "left" mean?)
-    new_future_set = [future_s]
+    new_future_set = {future_s}
     f = future_s.left
 
     while f in node_s.future and not f.is_gluing_point:
-        new_future_set.append(f)
-        sub_space.node_future[event.event_key(node)].remove(event.event_key(
-            f))  # TODO cleanup the event key coercion by figuring out workaround for node.future.remove()
-        sub_space.node_past[event.event_key(f)].remove(event.event_key(node))
+        new_future_set.add(f)
+        sub_space.node_future[node.key].remove(f.key)  # TODO cleanup the event key coercion by figuring out workaround for node.future.remove()
+        sub_space.node_past[f.key].remove(node.key)
         f = f.left
-    event.connect_temporal(new_s, future=list(set(new_future_set)))
-    old_future_set = list(
-        set(node_s.future) - set(new_future_set)
-    ) + [future_s]
+    event.connect_temporal(new_s, future=new_future_set)
+    old_future_set = node_s.future.difference(new_future_set).union({future_s})
     event.connect_temporal(node_s, future=old_future_set)
     # sub_space.node_past[future].append(new_node)
 
     # past changes
-    new_past_set = [past_s]
+    new_past_set = {past_s}
     p = past_s.left
     while p in node_s.past:
-        new_past_set.append(p)
-        sub_space.node_past[event.event_key(node_s)].remove(event.event_key(p))
-        sub_space.node_future[event.event_key(p)].remove(event.event_key(node_s))
+        new_past_set.add(p)
+        sub_space.node_past[node_s.key].remove(p.key)
+        sub_space.node_future[p.key].remove(node_s.key)
         p = p.left
-
     event.connect_temporal(new_s, past=new_past_set)
-    old_past_set = list(set(node_s.past) - set(new_past_set)) + [past_s]
+    old_past_set = node_s.past.difference(new_past_set).union({past_s})
     event.connect_temporal(node_s, past=old_past_set)
     # sub_space.node_future[past].append(new_node)
 
@@ -134,13 +130,13 @@ def imove(st, node):
     left_s = event.Event(sub_space, left.key)
     node_s = event.Event(sub_space, node.key)
 
-    new_future = list(set(left_s.future).union(node_s.future))
-    new_past = list(set(left_s.past).union(node_s.past))
+    new_future = set(left_s.future).union(node_s.future)
+    new_past = set(left_s.past).union(node_s.past)
     new_left = left_s.left
 
     event.connect_spatial(new_left, node_s)
     event.connect_temporal(node_s, past=new_past, future=new_future)
-    event.connect_temporal(left_s, past=[], future=[])
+    event.connect_temporal(left_s, past=set(), future=set())
 
     sub_space.remove_node(left_s)
     faces = sub_space.get_faces_containing(left.key)
