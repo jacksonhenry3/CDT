@@ -12,6 +12,9 @@ import pandas
 from cdtea import event
 from cdtea.space_time import SpaceTime
 
+DiffSummary = collections.namedtuple('DiffSummary', 'unique_left unique_right common diffs')
+DegreeSummary = collections.namedtuple('DegreeSummary', 'degree missing')
+
 
 class AuditError(ValueError):
     """Error subclass for audit-related errors"""
@@ -55,9 +58,6 @@ def ranges(i):
     for a, b in itertools.groupby(enumerate(i), lambda t: t[1] - t[0]):
         b = list(b)
         yield b[0][1], b[-1][1]
-
-
-DiffSummary = collections.namedtuple('DiffSummary', 'unique_left unique_right common diffs')
 
 
 def node_diff(st1: SpaceTime, st2: SpaceTime, display_results: bool = False):
@@ -125,3 +125,24 @@ Diff Table:
                cc=len(summary.common),
                common=str(list(ranges(list(sorted(summary.common))))) if diff_type == 'node' else str(summary.common),
                table='None' if summary.diffs.empty else summary.diffs.to_string(index=False))
+
+
+def degree(st: SpaceTime) -> DegreeSummary:
+    nodes_by_degree = collections.defaultdict(list)
+    nodes_missing = []
+    for n in st.ordered_nodes:
+        left = st.node_left[n]
+        right = st.node_right[n]
+        past = st.node_left[n]
+        future = st.node_future[n]
+
+        if not isinstance(left, int):
+            nodes_missing.append((n, 'left', str(left)))
+        if not isinstance(right, int):
+            nodes_missing.append((n, 'right', str(right)))
+        if all(not isinstance(p, int) for p in past):
+            nodes_missing.append((n, 'past', str(past)))
+        if all(not isinstance(f, int) for f in future):
+            nodes_missing.append((n, 'future', str(future)))
+    nodes_missing = pandas.DataFrame(data=nodes_missing, columns=['Node', 'Type', 'Value'])
+    return DegreeSummary(degree=nodes_by_degree, missing=nodes_missing)
