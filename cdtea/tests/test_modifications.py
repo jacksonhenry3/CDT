@@ -1,7 +1,7 @@
 """Tests for the modifications module"""
 from cdtea import event, modifications
 from cdtea.space_time import SpaceTime
-from cdtea.tests.test_space_time import dummy_space_time
+from cdtea.tests.test_space_time import dummy_space_time, find_gluing_point_references
 
 
 class TestModifications:
@@ -19,6 +19,9 @@ class TestModifications:
         n1, f1, p1 = event.events(dst, [12, 0, 11])
         modifications.move(dst, n1, f1, p1)
         n2, f2, p2 = event.events(dst, [13, 1, 9])
+        gpn, gpr = find_gluing_point_references(dst)
+        subspace = dst.pop([n2])
+        gpn2, gpr2 = find_gluing_point_references(subspace)
         modifications.move(dst, n2, f2, p2)
         assert isinstance(dst, SpaceTime)
 
