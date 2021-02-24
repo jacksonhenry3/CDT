@@ -54,6 +54,9 @@ class SpaceTime(object):
             return False
         return self.to_dict() == other.to_dict()
 
+    def __repr__(self):
+        return 'ST({:d}, {:d})'.format(len(self.nodes), len(self.faces))
+
     @property
     def max_node(self):
         return max(self.nodes)
@@ -61,6 +64,23 @@ class SpaceTime(object):
     @property
     def ordered_nodes(self) -> list:
         return list(sorted(self.nodes))
+
+    @property
+    def gluing_edges(self) -> typing.List[typing.Tuple[int, str, event.GluingPoint]]:
+        """Find and return all references to gluing points"""
+        edges = []
+        for n in self.ordered_nodes:
+            if isinstance(self.node_left[n], event.GluingPoint):
+                edges.append((n, event.PassThruAttr.Left, self.node_left[n]))
+            if isinstance(self.node_right[n], event.GluingPoint):
+                edges.append((n, event.PassThruAttr.Right, self.node_right[n]))
+            for p in self.node_past[n]:
+                if isinstance(p, event.GluingPoint):
+                    edges.append((n, event.PassThruAttr.Past, p))
+            for f in self.node_future[n]:
+                if isinstance(f, event.GluingPoint):
+                    edges.append((n, event.PassThruAttr.Future, f))
+        return edges
 
     def get_random_node(self):
         return event.Event(self, random.choice(self.ordered_nodes))
@@ -105,6 +125,8 @@ class SpaceTime(object):
         self.node_future.pop(n)
         self.node_past.pop(n)
         self.faces_containing.pop(n)
+
+        # self.
 
     # TODO Made redundant by faces_containing dict, remove once fully validated
     def get_faces_containing(self, n: Event):
@@ -163,27 +185,34 @@ class SpaceTime(object):
     def push(self, sub_space):
         """
         This reinserts sub_space
+
+        Warnings:
+            1) This will ONLY work for a subspace that has been cut from THIS spacetime (common usage)
+            2) This will ONLY work for sequential pairs of pop/push. pop/pop/push could fail
         """
         # add a check to make sure that we are inserting unique new nodes
         nodes = sub_space.ordered_nodes
         faces = sub_space.faces
 
-        for n in nodes:
-            self.add_node(n)
+        for s in nodes:
+            self.add_node(s)
 
-        for n, n_s in event.events([self, sub_space], nodes):
-            # only for 'interior' edges
-            # if not n_s.left.is_gluing_point
-            if n_s.is_gluing_point:
-                raise ValueError('Found gluing point')
-            event.connect_spatial(n_s.left, n)  # n.left = n_s.left
-            event.connect_spatial(n, n_s.right)  # n.right = n_s.right
-            event.connect_temporal(n, past=n_s.past)  # n.past = n_s.past
-            event.connect_temporal(n, future=n_s.future)  # n.future = n_s.future
-            event.set_faces(n, n_s.faces)
+        # Replicate the interior structure from the subspace in the superspace (not gluing)
+        # This step will also add edges that reference "gluing points", however, since
+        # the subspace was cut from THIS space, then all those references should be valid
+        for s, n_s in event.events([self, sub_space], nodes):
+            event.connect_spatial(n_s.left, s)  # n.left = n_s.left
+            event.connect_spatial(s, n_s.right)  # n.right = n_s.right
+            event.connect_temporal(s, past=n_s.past)  # n.past = n_s.past
+            event.connect_temporal(s, future=n_s.future)  # n.future = n_s.future
+            event.set_faces(s, n_s.faces)
 
-        # identify gluing points - replace references in superspace to non gluing points
-
+        for s, k, t in self.gluing_edges:
+            if k in (event.PassThruAttr.Left, event.PassThruAttr.Right):
+                getattr(self, event.PASS_THRU_ATTR_MAP[k])[s] = int(t)
+            else:
+                getattr(self, event.PASS_THRU_ATTR_MAP[k])[s].remove(t)
+                getattr(self, event.PASS_THRU_ATTR_MAP[k])[s].add(int(t))
 
         for f in faces:
             self.faces.add(f)
