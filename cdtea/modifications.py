@@ -148,10 +148,10 @@ def imove(st, node):
     sub_space.faces = [x for x in sub_space.faces if x not in faces]
     for face in faces:
         new_face = []
-        if node not in face:
+        if node.key not in face:
             for n in face:
-                if n == left:
-                    n = node
+                if n == left.key:
+                    n = node.key
                 new_face.append(n)
             sub_space.faces.append(frozenset(new_face))
             sub_space.face_dilaton[frozenset(new_face)] = -1
