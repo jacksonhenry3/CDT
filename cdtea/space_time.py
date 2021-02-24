@@ -113,29 +113,29 @@ class SpaceTime(object):
                 n = list(sorted(self.node_future[n]))[0]
         return layers
 
-    def add_node(self, n: int = None):
+    def add_key(self, key: int = None):
         """Function for keeping consistency across various lookup dict keys and nodes list"""
-        if n is None:
-            n = self.max_node + 1
+        if key is None:
+            key = self.max_node + 1
         else:
-            if n in self.nodes:
-                raise ValueError('Cannot add node {:d} to spacetime {}, already exists'.format(n, self))
-        self.nodes.add(n)
-        self.node_left[n] = None
-        self.node_right[n] = None
-        self.node_future[n] = set()
-        self.node_past[n] = set()
-        self.faces_containing[n] = set()
+            if key in self.nodes:
+                raise ValueError('Cannot add node {:d} to spacetime {}, already exists'.format(key, self))
+        self.nodes.add(key)
+        self.node_left[key] = None
+        self.node_right[key] = None
+        self.node_future[key] = set()
+        self.node_past[key] = set()
+        self.faces_containing[key] = set()
         self._ordered_nodes = None
 
-    def remove_node(self, n: int):
+    def remove_key(self, key: int):
         """Function for removing node"""
-        self.nodes.remove(n)
-        self.node_left.pop(n)
-        self.node_right.pop(n)
-        self.node_future.pop(n)
-        self.node_past.pop(n)
-        self.faces_containing.pop(n)
+        self.nodes.remove(key)
+        self.node_left.pop(key)
+        self.node_right.pop(key)
+        self.node_future.pop(key)
+        self.node_past.pop(key)
+        self.faces_containing.pop(key)
         self._ordered_nodes = None
 
     # TODO Made redundant by faces_containing dict, remove once fully validated
@@ -163,7 +163,7 @@ class SpaceTime(object):
 
         # set the sub_space nodes and faces
         for n in nodes:
-            sub_space.add_node(n=n.key)
+            sub_space.add_key(key=n.key)
         sub_space.faces = set(faces.copy())
 
         # loop through all removed nodes and remove their properties from self and add them to sub_space
@@ -184,7 +184,7 @@ class SpaceTime(object):
 
         # dont forget to set sub_space dead refrences
         for n in sub_space.nodes:
-            self.remove_node(n)
+            self.remove_key(n)
 
         # remove all faces that contain anything in node_list
         for f in faces:
@@ -205,7 +205,7 @@ class SpaceTime(object):
         faces = sub_space.faces
 
         for s in nodes:
-            self.add_node(s)
+            self.add_key(s)
 
         # Replicate the interior structure from the subspace in the superspace (not gluing)
         # This step will also add edges that reference "gluing points", however, since
@@ -353,7 +353,7 @@ def generate_flat_spacetime(space_size: int, time_size: int):
     for t in range(time_size):
         start = index  # the first index in the current time slice
         for x in range(space_size):
-            spacetime.add_node(index)
+            spacetime.add_key(index)
 
             left = start + (index - 1) % space_size
             right = start + (index + 1) % space_size
