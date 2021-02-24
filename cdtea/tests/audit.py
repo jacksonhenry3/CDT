@@ -3,6 +3,7 @@ This module exists within the tests subpackage since it is not part of the gener
 but rather a set of useful tools for inspecting SpaceTime instance attributes for testing
 and debugging while developing.
 """
+
 import collections
 import itertools
 
@@ -10,6 +11,10 @@ import pandas
 
 from cdtea import event
 from cdtea.space_time import SpaceTime
+
+
+class AuditError(ValueError):
+    """Error subclass for audit-related errors"""
 
 
 def find_duplicate_temporal_connections(st: SpaceTime):
@@ -52,13 +57,10 @@ def ranges(i):
         yield b[0][1], b[-1][1]
 
 
-# TODO move these tools somewhere real eventually
 DiffSummary = collections.namedtuple('DiffSummary', 'unique_left unique_right common diffs')
 
 
-
-
-def spacetime_diff(st1: SpaceTime, st2: SpaceTime, display_results: bool = False):
+def node_diff(st1: SpaceTime, st2: SpaceTime, display_results: bool = False):
     """Collect difference between shared nodes in two spacetimes"""
     common_nodes = st1.nodes.intersection(st2.nodes)
     unique_nodes_1 = set(n for n in st1.nodes if n not in common_nodes)
@@ -80,24 +82,46 @@ def spacetime_diff(st1: SpaceTime, st2: SpaceTime, display_results: bool = False
     print(format_diff(summary))
 
 
-def format_diff(summary: DiffSummary) -> str:
+def face_diff(st1: SpaceTime, st2: SpaceTime, display_results: bool = False):
+    """Collect difference between shared faces in two spacetimes"""
+    common_faces = st1.faces.intersection(st2.faces)
+    unique_faces_1 = set(n for n in st1.faces if n not in common_faces)
+    unique_faces_2 = set(n for n in st2.faces if n not in common_faces)
+    diffs = []
+    for n in common_faces:
+        if st1.face_x[n] != st2.face_x[n]:
+            diffs.append((n, 'x', st1.face_x[n], st2.face_x[n]))
+        if st1.face_t[n] != st2.face_t[n]:
+            diffs.append((n, 't', st1.face_t[n], st2.face_t[n]))
+    diffs = pandas.DataFrame([[n, t, str(l), str(r)] for n, t, l, r in diffs], columns=['Node', 'Type', 'Left', 'Right'])
+    summary = DiffSummary(unique_faces_1, unique_faces_2, common_faces, diffs)
+    if not display_results:
+        return summary
+    print(format_diff(summary, diff_type='face'))
+
+
+def format_diff(summary: DiffSummary, diff_type: str = 'node') -> str:
     """Utility for formatting diff information"""
+    if diff_type == 'node':
+        item_label = 'Nodes'
+    elif diff_type == 'face':
+        item_label = 'Faces'
+    else:
+        raise AuditError('Unknown diff format type: {}, options are: node, face'.format(diff_type))
     # TODO fix indenting
     return """SpaceTime Diff Summary:
 
-{ulc:d} Unique L Nodes: {unique_left}
-{urc:d} Unique R Nodes: {unique_right}
-{cc:d} Common Nodes: {common_nodes}
+{ulc:d} Unique L {label}: {unique_left}
+{urc:d} Unique R {label}: {unique_right}
+{cc:d} Common {label}: {common}
 
 Diff Table:
 {table}
-    """.format(ulc=len(summary.unique_left),
+    """.format(label=item_label,
+               ulc=len(summary.unique_left),
                unique_left=str(summary.unique_left),
                urc=len(summary.unique_right),
                unique_right=str(summary.unique_right),
                cc=len(summary.common),
-               common_nodes=str(list(ranges(list(sorted(summary.common))))),
-               table=summary.diffs.to_string(index=False))
-
-
-
+               common=str(list(ranges(list(sorted(summary.common))))) if diff_type == 'node' else str(summary.common),
+               table='None' if summary.diffs.empty else summary.diffs.to_string(index=False))

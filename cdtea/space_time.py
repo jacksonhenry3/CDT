@@ -25,11 +25,13 @@ class SpaceTime(object):
     links, both spacelike and timelike, determines the geometry of the piecewise
     linear manifold represented by the SpaceTime.
     """
+    __slots__ = ('closed', 'nodes', 'node_left', 'node_right', 'node_past', 'node_future', 'faces_containing',
+                 'faces', 'face_dilaton', 'face_x', 'face_t')
 
     def __init__(self, nodes: set = None, node_left: dict = None, node_right: dict = None,
                  node_past: dict = None, node_future: dict = None, faces_containing: dict = None,
-                 faces: set = None, face_dilation: dict = None, face_x: dict = None,
-                 face_t: dict = None, dead_references: set = None, closed: bool = True):
+                 faces: set = None, face_dilaton: dict = None, face_x: dict = None,
+                 face_t: dict = None, closed: bool = True):
         super(SpaceTime, self).__init__()
         self.closed = closed
 
@@ -42,12 +44,9 @@ class SpaceTime(object):
         self.faces_containing = {} if faces_containing is None else faces_containing
 
         self.faces = set() if faces is None else faces  # faces is a frozenset of node indices
-        self.face_dilaton = {} if face_dilation is None else face_dilation  # a dict with keys of face tuples and field vals
+        self.face_dilaton = {} if face_dilaton is None else face_dilaton  # a dict with keys of face tuples and field vals
         self.face_x = {} if face_x is None else face_x  # a dict with keys of face tuples space-like connected
         self.face_t = {} if face_t is None else face_t  # a dict with keys of face tuples time-like connected
-
-        # This could be modified to include a list of dead references
-        self.dead_references = set() if dead_references is None else dead_references
 
     def __eq__(self, other):
         """Equivalence between """
@@ -129,7 +128,6 @@ class SpaceTime(object):
         # removes duplicates
         faces = list(set(faces))
         nodes = list(set(nodes))
-        self.dead_references = set(nodes.copy())  # i.e these nodes are no longer in the st
 
         # set the sub_space nodes and faces
         for n in nodes:
@@ -166,15 +164,6 @@ class SpaceTime(object):
         """
         This reinserts sub_space
         """
-
-        # Check to make sure that sub_space fills self aproapriatly
-        if any(n not in sub_space.nodes for n in self.dead_references):
-            pass
-            # print("sub_space cannot fill space_time gap")
-            # print("dead refrences are {}".format(self.dead_references))
-            # print("sub_space nodes are {}".format(sub_space.nodes))
-            # raise ValueError()
-
         # add a check to make sure that we are inserting unique new nodes
         nodes = sub_space.ordered_nodes
         faces = sub_space.faces
@@ -204,9 +193,6 @@ class SpaceTime(object):
             # self.face_x[f] = sub_space.face_x[f]
             # self.face_t[f] = sub_space.face_t[f]
 
-        # This should probably be validated
-        self.dead_nodes = []
-        # Can we get rid of sub_space at this point somehow?
 
     def to_dict(self):
         """Convert a SpaceTime object to a dict containing all the configuration information
@@ -223,10 +209,9 @@ class SpaceTime(object):
             'node_future': self.node_future,
             'faces_containing': self.faces_containing,
             'faces': self.faces,
-            'face_dilation': self.face_dilaton,
+            'face_dilaton': self.face_dilaton,
             'face_x': self.face_x,
             'face_t': self.face_t,
-            'dead_references': self.dead_references,
         }
 
     def to_pickle(self, path: typing.Union[str, pathlib.Path] = None):
@@ -291,8 +276,7 @@ class SpaceTime(object):
         Returns:
             SpaceTime, the reserialized SpaceTime object
         """
-        for key in ('closed', 'nodes', 'node_left', 'node_right', 'node_past', 'node_future',
-                    'faces_containing', 'faces', 'face_dilation', 'face_x', 'face_t', 'dead_references'):
+        for key in SpaceTime.__slots__[1:]:
             if key not in config_dict:
                 raise SerializationError('Missing key {} when attempting to create SpaceTime from dict:\n{}'.format(key, str(config_dict)))
         return SpaceTime(**config_dict)  # pass-thru to init method
