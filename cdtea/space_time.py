@@ -80,7 +80,7 @@ class SpaceTime(object):
             if n in used:
                 layers.append(layer)
                 layer = []
-                n = self.node_future[n][0]
+                n = list(sorted(self.node_future[n]))[0]
         return layers
 
     def add_node(self, n: int = None):
@@ -93,9 +93,9 @@ class SpaceTime(object):
         self.nodes.add(n)
         self.node_left[n] = None
         self.node_right[n] = None
-        self.node_future[n] = []
-        self.node_past[n] = []
-        self.faces_containing[n] = []
+        self.node_future[n] = set()
+        self.node_past[n] = set()
+        self.faces_containing[n] = set()
 
     def remove_node(self, n: int):
         """Function for removing node"""
@@ -183,11 +183,18 @@ class SpaceTime(object):
             self.add_node(n)
 
         for n, n_s in event.events([self, sub_space], nodes):
+            # only for 'interior' edges
+            # if not n_s.left.is_gluing_point
+            if n_s.is_gluing_point:
+                raise ValueError('Found gluing point')
             event.connect_spatial(n_s.left, n)  # n.left = n_s.left
             event.connect_spatial(n, n_s.right)  # n.right = n_s.right
             event.connect_temporal(n, past=n_s.past)  # n.past = n_s.past
             event.connect_temporal(n, future=n_s.future)  # n.future = n_s.future
             event.set_faces(n, n_s.faces)
+
+        # identify gluing points - replace references in superspace to non gluing points
+
 
         for f in faces:
             self.faces.add(f)
@@ -265,7 +272,7 @@ class SpaceTime(object):
                 key = (n, s) if n < s else (s, n)
                 if key not in edge_types:
                     edge_types[key] = {'type': 'spacelike'}
-            for t in self.node_past[n] + self.node_future[n]:
+            for t in self.node_past[n].union(self.node_future[n]):
                 key = (n, t) if n < t else (t, n)
                 if key not in edge_types:
                     edge_types[key] = {'type': 'timelike'}
@@ -342,9 +349,9 @@ def generate_flat_spacetime(space_size: int, time_size: int):
             past = past_start + (index) % space_size
 
             # these are the time connections of a node
-            spacetime.node_past[index] = [past_left, past]
+            spacetime.node_past[index] = set([past_left, past])
 
-            spacetime.node_future[index] = [future, future_right]
+            spacetime.node_future[index] = set([future, future_right])
 
             # There are twice as many simplices as nodes, so there are 2 faces defined per iteration
             # These are the faces (a different two can be chosen, the only important thing is that they are uniquly defined by the vertex (t,x))

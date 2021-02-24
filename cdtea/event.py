@@ -104,7 +104,7 @@ class Event:
             value = getattr(self.space_time, PASS_THRU_ATTR_MAP[key])[self.key]
             if key in EVENT_RETURNING_ATTRS:
                 if isinstance(value, Iterable):
-                    return [v if v is None else Event(space_time=self.space_time, event_key=v) for v in value]
+                    return set([v if v is None else Event(space_time=self.space_time, event_key=v) for v in value])
                 return value if value is None else Event(space_time=self.space_time, event_key=value)
             return value
 
@@ -151,7 +151,7 @@ class Event:
         Returns:
             List[Event], all neighbor events
         """
-        return self.spatial_neighbors + self.temporal_neighbors
+        return self.spatial_neighbors.union(self.temporal_neighbors)
 
     @property
     def past(self):
@@ -178,7 +178,7 @@ class Event:
         Returns:
             List[Event], the left and right neighbors
         """
-        return [self.left, self.right]
+        return {self.left, self.right}
 
     @property
     def temporal_neighbors(self):
@@ -187,7 +187,7 @@ class Event:
         Returns:
             List[Event], the past and future neighbors
         """
-        return self.past + self.future
+        return self.past.union(self.future)
 
 
 def event_key(e: typing.Union[Event, int]) -> int:
@@ -252,7 +252,7 @@ def coerce_gluing_point(space_time, event: typing.Union[Event, typing.Iterable[E
     """
     # Naive
     if isinstance(event, Iterable):
-        return [coerce_gluing_point(space_time, v) for v in event]
+        return set([coerce_gluing_point(space_time, v) for v in event])
     if event.key not in space_time.nodes:
         return Event(event.space_time, event_key=GluingPoint(event.key))
     return event
@@ -290,7 +290,7 @@ def connect_spatial(left: Event, right: Event):
             getattr(original_left_of_right.space_time, PASS_THRU_ATTR_MAP[PassThruAttr.Right])[original_left_of_right.key] = None
 
 
-def connect_temporal(present: Event, past: typing.List[Event] = None, future: typing.List[Event] = None):
+def connect_temporal(present: Event, past: typing.Set[Event] = None, future: typing.Set[Event] = None):
     """Make a consistent connection between a present event and a collection of past or future events
 
     Args:
@@ -316,17 +316,17 @@ def connect_temporal(present: Event, past: typing.List[Event] = None, future: ty
         dual_attr = EDGE_CONSISTENCY_ATTR_DUALS_DICT[attr]
         if value is not None:
             # ensure unique
-            value = list(set(value))
+            value = set(value)
 
             # Set new value and keep track of original
             original = getattr(present, attr)
-            getattr(present.space_time, PASS_THRU_ATTR_MAP[attr])[present.key] = [v.key for v in coerce_gluing_point(present.space_time, value)]
+            getattr(present.space_time, PASS_THRU_ATTR_MAP[attr])[present.key] = set([v.key for v in coerce_gluing_point(present.space_time, value)])
 
             # Set consistency condition for new nodes
             new = [e for e in value if e not in original]
             for n in new:
                 if not n.is_gluing_point and present not in getattr(n, dual_attr):
-                    getattr(n.space_time, PASS_THRU_ATTR_MAP[dual_attr])[n.key].append(coerce_gluing_point(n.space_time, present).key)
+                    getattr(n.space_time, PASS_THRU_ATTR_MAP[dual_attr])[n.key].add(coerce_gluing_point(n.space_time, present).key)
 
             # Set consistency condition for replaced nodes
             replaced = [e for e in original if e not in value]
