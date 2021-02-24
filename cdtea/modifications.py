@@ -17,7 +17,7 @@ def move(st, node, future, past):
 
     # increment the total node counter
     new_node_num = max(st.nodes.union(sub_space.nodes)) + 1
-    sub_space.add_node(new_node_num)
+    sub_space.add_key(new_node_num)
 
     # create a node object for easy manipulation. This also automatically adds the node to the sub_space
     new_s = event.Event(sub_space, new_node_num)
@@ -138,8 +138,8 @@ def imove(st, node):
     event.connect_temporal(node_s, past=new_past, future=new_future)
     event.connect_temporal(left_s, past=set(), future=set())
 
-    sub_space.remove_node(left_s)
-    faces = sub_space.get_faces_containing(left.key)
+    sub_space.remove_key(left_s.key)
+    faces = sub_space.get_faces_containing(left)
 
     sub_space.faces = [x for x in sub_space.faces if x not in faces]
     for face in faces:
