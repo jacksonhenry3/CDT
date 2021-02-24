@@ -26,14 +26,14 @@ class TestAudit:
         """Test diff tool"""
         cdt1 = space_time.generate_flat_spacetime(3, 3)
         cdt2 = space_time.generate_flat_spacetime(3, 4)
-        diff = audit.node_diffs(cdt1, cdt2)
+        diff = audit.node_diff(cdt1, cdt2)
         assert isinstance(diff, audit.DiffSummary)
 
     def test_diff_summary(self):
         """Test diff tool summary"""
         cdt1 = space_time.generate_flat_spacetime(3, 3)
         cdt2 = space_time.generate_flat_spacetime(3, 4)
-        diff = audit.node_diffs(cdt1, cdt2)
+        diff = audit.node_diff(cdt1, cdt2)
         summary = audit.format_diff(diff)
         assert isinstance(summary, str)
 
