@@ -34,8 +34,9 @@ class TestModifications:
         dst_copy = generate_flat_spacetime(3, 3)
         n, f, p = event.events(dst, [4, 7, 1])
         moves.increase(dst, n, f, p)
-        new_node = event.Event(dst, 9)
         moves.decrease(dst, n)
-        assert dst.nodes == dst_copy.nodes
-        assert dst.node_left == dst_copy.node_left
+        node_diff = audit.node_diff(dst, dst_copy)
+        assert node_diff.diffs.empty
+        face_diff = audit.face_diff(dst, dst_copy)
+        assert face_diff.diffs.empty
         assert dst.geometric_equal(dst_copy)

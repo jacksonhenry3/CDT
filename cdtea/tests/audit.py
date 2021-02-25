@@ -75,6 +75,8 @@ def node_diff(st1: SpaceTime, st2: SpaceTime, display_results: bool = False):
             diffs.append((n, 'past', st1.node_past[n], st2.node_past[n]))
         if st1.node_future[n] != st2.node_future[n]:
             diffs.append((n, 'future', st1.node_future[n], st2.node_future[n]))
+        if st1.faces_containing[n] != st2.faces_containing[n]:
+            diffs.append((n, 'faces', st1.faces_containing[n], st2.faces_containing[n]))
     diffs = pandas.DataFrame([[n, t, str(l), str(r)] for n, t, l, r in diffs], columns=['Node', 'Type', 'Left', 'Right'])
     summary = DiffSummary(unique_nodes_1, unique_nodes_2, common_nodes, diffs)
     if not display_results:

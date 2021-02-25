@@ -28,6 +28,7 @@ class SpaceTime(object):
     """
     _NON_SERIALIZABLE_ATTRIBUTES = ('_ordered_nodes',)
     _SERIALIZABLE_ATTRIBUTES = ('closed', 'nodes', 'node_left', 'node_right', 'node_past', 'node_future', 'faces_containing', 'faces', 'face_dilaton', 'face_x', 'face_t')
+    _GEOMETRIC_ATTRIBUTES = ('nodes', 'node_left', 'node_right', 'node_past', 'node_future', 'faces_containing', 'faces', 'face_dilaton', 'face_x', 'face_t')
     __slots__ = _NON_SERIALIZABLE_ATTRIBUTES + _SERIALIZABLE_ATTRIBUTES
 
     def __init__(self, nodes: set = None, node_left: dict = None, node_right: dict = None,
@@ -62,21 +63,17 @@ class SpaceTime(object):
     def __repr__(self):
         return 'ST({:d}, {:d})'.format(len(self.nodes), len(self.faces))
 
-    def geometric_equal(self, other):
+    def geometric_equal(self, other) -> bool:
         """ Compares self and others geometric properties"""
-
         if not isinstance(other, SpaceTime):
             return False
 
-        geometric_properties = ["nodes", "node_left", "node_right", "node_past", "node_future", "faces_containing", "faces", "face_x", "face_t"]
-        self_dic = self.to_dict()
-        other_dic = other.to_dict()
-
-        geometric_equality = True
-        for prop in geometric_properties:
-            geometric_equality = geometric_equality and self_dic[prop] == other_dic[prop]
-
-        return geometric_equality
+        self_dict = self.to_dict(key_filter=list(self._GEOMETRIC_ATTRIBUTES))
+        other_dict = other.to_dict(key_filter=list(other._GEOMETRIC_ATTRIBUTES))
+        for k in self_dict.keys():
+            if self_dict[k] != other_dict[k]:
+                print('oops')
+        return self_dict == other_dict
 
     def copy(self):
         """Deepcopy of this SpaceTime"""
@@ -248,25 +245,19 @@ class SpaceTime(object):
             # self.face_x[f] = sub_space.face_x[f]
             # self.face_t[f] = sub_space.face_t[f]
 
-    def to_dict(self):
+    def to_dict(self, key_filter: typing.List[str] = None):
         """Convert a SpaceTime object to a dict containing all the configuration information
 
         Returns:
             dict, with all attributes of the SpaceTime
         """
-        return {
-            'closed': self.closed,
-            'nodes': self.nodes,
-            'node_left': self.node_left,
-            'node_right': self.node_right,
-            'node_past': self.node_past,
-            'node_future': self.node_future,
-            'faces_containing': self.faces_containing,
-            'faces': self.faces,
-            'face_dilaton': self.face_dilaton,
-            'face_x': self.face_x,
-            'face_t': self.face_t,
-        }
+        d = {attr: getattr(self, attr) for attr in self._SERIALIZABLE_ATTRIBUTES}
+        existing_keys = list(d.keys())
+        if key_filter is not None:
+            for k in existing_keys:
+                if k not in key_filter:
+                    d.pop(k)
+        return d
 
     def to_pickle(self, path: typing.Union[str, pathlib.Path] = None):
         """Convert SpaceTime to pickle format
