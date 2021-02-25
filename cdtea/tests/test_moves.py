@@ -4,7 +4,7 @@ from cdtea.space_time import SpaceTime, generate_flat_spacetime
 from cdtea.tests import audit
 
 
-class TestModifications:
+class TestMoves:
     """Test modification moves"""
 
     def test_move(self):
