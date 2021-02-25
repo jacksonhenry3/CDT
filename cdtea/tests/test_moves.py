@@ -29,6 +29,15 @@ class TestMoves:
         moves.decrease(dst, n)
         assert isinstance(dst, SpaceTime)
 
+    def test_multiple_imove(self):
+        """Test inverse move"""
+        dst = generate_flat_spacetime(4, 4)
+        n = event.Event(dst, 5)
+        moves.decrease(dst, n)
+        n = event.Event(dst, 5)
+        moves.decrease(dst, n)
+        assert isinstance(dst, SpaceTime)
+
     def test_geometric_inverses(self):
         dst = generate_flat_spacetime(3, 3)
         dst_copy = generate_flat_spacetime(3, 3)
