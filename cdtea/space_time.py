@@ -89,11 +89,11 @@ class SpaceTime(object):
             self._ordered_nodes = list(sorted(self.nodes))
         return self._ordered_nodes
 
-    @property
-    def gluing_edges(self) -> typing.List[typing.Tuple[int, str, event.GluingPoint]]:
+    def gluing_edges(self, node_subset: typing.List[event.Event] = None) -> typing.List[typing.Tuple[int, str, event.GluingPoint]]:
         """Find and return all references to gluing points"""
         edges = []
-        for n in self.nodes:
+        nodes = self.nodes if node_subset is None else [n.key for n in node_subset]
+        for n in nodes:
             if isinstance(self.node_left[n], event.GluingPoint):
                 edges.append((n, event.PassThruAttr.Left, self.node_left[n]))
             if isinstance(self.node_right[n], event.GluingPoint):
@@ -230,7 +230,10 @@ class SpaceTime(object):
             event.connect_temporal(s, future=n_s.future)  # n.future = n_s.future
             event.set_faces(s, n_s.faces)
 
-        for s, k, t in self.gluing_edges:
+        gluing_subset = set()
+        for n in event.events(self, nodes):
+            gluing_subset = gluing_subset.union(n.neighbors)
+        for s, k, t in self.gluing_edges(node_subset=gluing_subset):
             if k in (event.PassThruAttr.Left, event.PassThruAttr.Right):
                 getattr(self, event.PASS_THRU_ATTR_MAP[k])[s] = int(t)
             else:
