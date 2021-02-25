@@ -4,6 +4,7 @@ import itertools
 import os
 import pathlib
 import tempfile
+import sys
 
 import networkx
 import pandas
@@ -12,6 +13,10 @@ import pytest
 from cdtea import event, moves, space_time
 from cdtea.space_time import SpaceTime
 from cdtea.tests import audit
+from cdtea.space_time import generate_flat_spacetime
+
+PY_VERSION = sys.version_info
+
 
 
 class TestSpaceTime:
@@ -88,36 +93,41 @@ class TestSpaceTimeSerialize:
                           'node_right': {0: 1, 1: 0, 2: 3, 3: 2},
                           'nodes': {0, 1, 2, 3}}
 
-    SAMPLE_CONFIG_PICKLE = (b'\x80\x03ccdtea.space_time\nSpaceTime\nq\x00)\x81q\x01N}q\x02(X\x0e\x00'
-                            b'\x00\x00_ordered_nodesq\x03NX\x06\x00\x00\x00closedq\x04\x88X\x05\x00'
-                            b'\x00\x00nodesq\x05cbuiltins\nset\nq\x06]q\x07(K\x00K\x01K\x02K\x03e\x85q'
-                            b'\x08Rq\tX\t\x00\x00\x00node_leftq\n}q\x0b(K\x00K\x01K\x01K\x00K\x02K\x03'
-                            b'K\x03K\x02uX\n\x00\x00\x00node_rightq\x0c}q\r(K\x00K\x01K\x01K\x00K\x02'
-                            b'K\x03K\x03K\x02uX\t\x00\x00\x00node_pastq\x0e}q\x0f(K\x00h\x06]q\x10(K'
-                            b'\x02K\x03e\x85q\x11Rq\x12K\x01h\x06]q\x13(K\x02K\x03e\x85q\x14Rq\x15K\x02h'
-                            b'\x06]q\x16(K\x00K\x01e\x85q\x17Rq\x18K\x03h\x06]q\x19(K\x00K\x01e\x85q\x1a'
-                            b'Rq\x1buX\x0b\x00\x00\x00node_futureq\x1c}q\x1d(K\x00h\x06]q\x1e(K\x02'
-                            b'K\x03e\x85q\x1fRq K\x01h\x06]q!(K\x02K\x03e\x85q"Rq#K\x02h\x06]q$(K\x00K\x01'
-                            b"e\x85q%Rq&K\x03h\x06]q'(K\x00K\x01e\x85q(Rq)uX\x10\x00\x00\x00faces_contai"
-                            b'ningq*}q+(K\x00]q,(cbuiltins\nfrozenset\nq-]q.(K\x00K\x01K\x03e\x85q/Rq0h'
-                            b'-]q1(K\x00K\x01K\x03e\x85q2Rq3h-]q4(K\x00K\x02K\x03e\x85q5Rq6h-]q7(K'
-                            b'\x00K\x02K\x03e\x85q8Rq9h-]q:(K\x00K\x01K\x02e\x85q;Rq<h-]q=(K\x00K'
-                            b'\x01K\x02e\x85q>Rq?eK\x01]q@(h-]qA(K\x00K\x01K\x02e\x85qBRqCh-]qD(K\x00'
-                            b'K\x01K\x02e\x85qERqFh-]qG(K\x01K\x02K\x03e\x85qHRqIh-]qJ(K\x01K\x02'
-                            b'K\x03e\x85qKRqLh-]qM(K\x00K\x01K\x03e\x85qNRqOh-]qP(K\x00K\x01K\x03e\x85qQ'
-                            b'RqReK\x02]qS(h-]qT(K\x01K\x02K\x03e\x85qURqVh-]qW(K\x01K\x02K\x03e\x85qXRqY'
-                            b'h-]qZ(K\x00K\x01K\x02e\x85q[Rq\\h-]q](K\x00K\x01K\x02e\x85q^Rq_h-]q`('
-                            b'K\x00K\x02K\x03e\x85qaRqbh-]qc(K\x00K\x02K\x03e\x85qdRqeeK\x03]qf(h-]qg'
-                            b'(K\x00K\x02K\x03e\x85qhRqih-]qj(K\x00K\x02K\x03e\x85qkRqlh-]qm(K\x00K\x01K'
-                            b'\x03e\x85qnRqoh-]qp(K\x00K\x01K\x03e\x85qqRqrh-]qs(K\x01K\x02K\x03e\x85qtR'
-                            b'quh-]qv(K\x01K\x02K\x03e\x85qwRqxeuX\x05\x00\x00\x00facesqyh\x06]qz(hVh0hih'
-                            b'Ce\x85q{Rq|X\x0c\x00\x00\x00face_dilatonq}}q~(h0J\xff\xff\xff\xffhC'
-                            b'J\xff\xff\xff\xffhVJ\xff\xff\xff\xffhiJ\xff\xff\xff\xffuX\x06\x00\x00\x00fac'
-                            b'e_xq\x7f}q\x80(h0]q\x81(h9h-]q\x82(K\x01K\x02K\x03e\x85q\x83Rq\x84ehC]'
-                            b'q\x85(hLh-]q\x86(K\x00K\x02K\x03e\x85q\x87Rq\x88ehV]q\x89(h_h-]q\x8a(K'
-                            b'\x00K\x01K\x03e\x85q\x8bRq\x8cehi]q\x8d(hrh-]q\x8e(K\x00K\x01K\x02e\x85q'
-                            b'\x8fRq\x90euX\x06\x00\x00\x00face_tq\x91}q\x92(h0h?hChRhVhehihxuu\x86q\x93'
-                            b'b.')
+    SAMPLE_CONFIG_PICKLE_38 = (b'\x80\x04\x95\xc7\x02\x00\x00\x00\x00\x00\x00\x8c\x10cdtea.space_time\x94\x8c\tSpaceTime\x94\x93\x94)\x81\x94}\x94(\x8c\x06closed\x94\x88'
+                               b'\x8c\x05nodes\x94\x8f\x94(K\x00K\x01K\x02K\x03\x90\x8c\tnode_left\x94}\x94(K\x00K\x01K\x01K\x00K\x02K\x03K\x03K\x02u\x8c\nnode_right\x94}\x94(K\x00K\x01'
+                               b'K\x01K\x00K\x02K\x03K\x03K\x02u\x8c\tnode_past\x94}\x94(K\x00]\x94(K\x03K\x02eK\x01]\x94(K\x02K\x03eK\x02]\x94(K\x01K\x00eK\x03]\x94(K\x00K\x01e'
+                               b'u\x8c\x0bnode_future\x94}\x94(K\x00]\x94(K\x02K\x03eK\x01]\x94(K\x03K\x02eK\x02]\x94(K\x00K\x01eK\x03]\x94(K\x01K\x00eu\x8c\x10faces_containin'
+                               b'g\x94}\x94(K\x00]\x94((K\x00K\x01K\x03\x91\x94(K\x00K\x01K\x03\x91\x94(K\x00K\x02K\x03\x91\x94(K\x00K\x02K\x03\x91\x94(K\x00K\x01K\x02\x91\x94('
+                               b'K\x00K\x01K\x02\x91\x94eK\x01]\x94((K\x00K\x01K\x02\x91\x94(K\x00K\x01K\x02\x91\x94(K\x01K\x02K\x03\x91\x94(K\x01K\x02K\x03\x91\x94(K\x00K\x01K'
+                               b'\x03\x91\x94(K\x00K\x01K\x03\x91\x94eK\x02]\x94((K\x01K\x02K\x03\x91\x94(K\x01K\x02K\x03\x91\x94(K\x00K\x01K\x02\x91\x94(K\x00K\x01K\x02\x91\x94(K'
+                               b'\x00K\x02K\x03\x91\x94(K\x00K\x02K\x03\x91\x94eK\x03]\x94((K\x00K\x02K\x03\x91\x94(K\x00K\x02K\x03\x91\x94(K\x00K\x01K\x03\x91\x94(K\x00K\x01K\x03'
+                               b'\x91\x94(K\x01K\x02K\x03\x91\x94(K\x01K\x02K\x03\x91\x94eu\x8c\x05faces\x94\x8f\x94(h)h\x1bh0h"\x90\x8c\x0cface_dilaton\x94}\x94(h\x1bJ\xff'
+                               b'\xff\xff\xffh"J\xff\xff\xff\xffh)J\xff\xff\xff\xffh0J\xff\xff\xff\xffu\x8c\x06face_x\x94}\x94(h\x1b]\x94(h\x1e(K\x01K\x02K\x03\x91\x94eh"]\x94(h'
+                               b'%(K\x00K\x02K\x03\x91\x94eh)]\x94(h,(K\x00K\x01K\x03\x91\x94eh0]\x94(h3(K\x00K\x01K\x02\x91\x94eu\x8c\x06face_t\x94}\x94(h\x1bh h"h\'h)h.h0h5u\x8c\x0fdead_references\x94\x8f\x94ub.')
+
+    SAMPLE_CONFIG_PICKLE_37 = (b'\x80\x03ccdtea.space_time\nSpaceTime\nq\x00)\x81q\x01}q\x02(X\x06\x00\x00\x00closedq\x03\x88X\x05\x00\x00\x00nodesq\x04cbuiltins\nset\nq\x05]q'
+                               b'\x06(K\x00K\x01K\x02K\x03e\x85q\x07Rq\x08X\t\x00\x00\x00node_leftq\t}q\n(K\x00K\x01K\x01K\x00K\x02K\x03K\x03K\x02uX\n\x00\x00\x00node_rightq\x0b}'
+                               b'q\x0c(K\x00K\x01K\x01K\x00K\x02K\x03K\x03K\x02uX\t\x00\x00\x00node_pastq\r}q\x0e(K\x00]q\x0f(K\x03K\x02eK\x01]q\x10(K\x02K\x03eK\x02]q\x11(K\x01K\x00'
+                               b'eK\x03]q\x12(K\x00K\x01euX\x0b\x00\x00\x00node_futureq\x13}q\x14(K\x00]q\x15(K\x02K\x03eK\x01]q\x16(K\x03K\x02eK\x02]q\x17(K\x00K\x01eK\x03]q\x18(K\x01'
+                               b'K\x00euX\x10\x00\x00\x00faces_containingq\x19}q\x1a(K\x00]q\x1b(cbuiltins\nfrozenset\nq\x1c]q\x1d(K\x00K\x01K\x03e\x85q\x1eRq\x1fh\x1c]q (K\x00'
+                               b'K\x01K\x03e\x85q!Rq"h\x1c]q#(K\x00K\x02K\x03e\x85q$Rq%h\x1c]q&(K\x00K\x02'
+                               b"K\x03e\x85q'Rq(h\x1c]q)(K\x00K\x01K\x02e\x85q*Rq+h\x1c]q,(K\x00K\x01K\x02"
+                               b'e\x85q-Rq.eK\x01]q/(h\x1c]q0(K\x00K\x01K\x02e\x85q1Rq2h\x1c]q3(K\x00K\x01K\x02e\x85q4Rq5h\x1c]q6(K\x01K\x02K\x03e\x85q7Rq8h\x1c]q9(K\x01K\x02K\x03e'
+                               b'\x85q:Rq;h\x1c]q<(K\x00K\x01K\x03e\x85q=Rq>h\x1c]q?(K\x00K\x01K\x03e\x85q@RqAeK\x02]qB(h\x1c]qC(K\x01K\x02K\x03e\x85qDRqEh\x1c]qF(K\x01K\x02'
+                               b'K\x03e\x85qGRqHh\x1c]qI(K\x00K\x01K\x02e\x85qJRqKh\x1c]qL(K\x00K\x01K\x02e\x85qMRqNh\x1c]qO(K\x00K\x02K\x03e\x85qPRqQh\x1c]qR(K\x00K\x02K\x03e\x85'
+                               b'qSRqTeK\x03]qU(h\x1c]qV(K\x00K\x02K\x03e\x85qWRqXh\x1c]qY(K\x00K\x02K\x03e\x85qZRq[h\x1c]q\\(K\x00K\x01K\x03e\x85q]Rq^h\x1c]q_(K\x00K\x01K\x03e\x85q'
+                               b'`Rqah\x1c]qb(K\x01K\x02K\x03e\x85qcRqdh\x1c]qe(K\x01K\x02K\x03e\x85qfRqgeuX\x05\x00\x00\x00facesqhh\x05]qi(hEh\x1fhXh2e\x85qjRqkX\x0c\x00\x00\x00fa'
+                               b'ce_dilatonql}qm(h\x1fJ\xff\xff\xff\xffh2J\xff\xff\xff\xffhEJ\xff\xff\xff\xffhXJ\xff\xff\xff\xffuX\x06\x00\x00\x00face_xqn}qo(h\x1f]qp(h(h\x1c]qq('
+                               b'K\x01K\x02K\x03e\x85qrRqseh2]qt(h;h\x1c]qu(K\x00K\x02K\x03e\x85qvRqwehE]qx(hNh\x1c]qy(K\x00K\x01K\x03e\x85qzRq{ehX]q|(hah\x1c]q}(K\x00K\x01K\x02e\x85'
+                               b'q~Rq\x7feuX\x06\x00\x00\x00face_tq\x80}q\x81(h\x1fh.h2hAhEhThXhguX\x0f\x00\x00\x00dead_referencesq\x82h\x05]q\x83\x85q\x84Rq\x85ub.')
+
+    def _sample_pickle(self):
+        if PY_VERSION.major != 3 or PY_VERSION.minor not in (7, 8):
+            raise NotImplementedError('Unsupported Python Version: {}. Supported options 3.7, 3.8'.format(str(PY_VERSION)))
+        return {
+            (3, 8): self.SAMPLE_CONFIG_PICKLE_38,
+            (3, 7): self.SAMPLE_CONFIG_PICKLE_37,
+        }[(PY_VERSION.major, PY_VERSION.minor)]
 
     def test_to_dict(self):
         """Test serialization to dict"""
@@ -142,7 +152,7 @@ class TestSpaceTimeSerialize:
         """Test conversion of SpaceTime to pickle data"""
         st = space_time.generate_flat_spacetime(2, 2)
         st_s = st.to_pickle()
-        assert st_s == self.SAMPLE_CONFIG_PICKLE
+        assert st_s == self._sample_pickle()
 
         with tempfile.TemporaryDirectory() as tmp:
             path = pathlib.Path(tmp) / 'test_to_pickle.pkl'
@@ -151,19 +161,19 @@ class TestSpaceTimeSerialize:
 
             with open(path.as_posix(), 'rb') as fid:
                 content = fid.read()
-                assert content == self.SAMPLE_CONFIG_PICKLE
+                assert content == self._sample_pickle()
 
     def test_from_pickle(self):
         """Test creation of SpaceTime from pickle"""
         st = space_time.generate_flat_spacetime(2, 2)
-        st_loaded = SpaceTime.from_pickle(data=self.SAMPLE_CONFIG_PICKLE)
+        st_loaded = SpaceTime.from_pickle(data=self._sample_pickle())
         assert isinstance(st_loaded, SpaceTime)
         assert st_loaded == st
 
         with tempfile.TemporaryDirectory() as tmp:
             path = pathlib.Path(tmp) / 'test_to_pickle.pkl'
             with open(path.as_posix(), 'wb') as fid:
-                fid.write(self.SAMPLE_CONFIG_PICKLE)
+                fid.write(self._sample_pickle())
             st_loaded = SpaceTime.from_pickle(path=path)
             assert isinstance(st_loaded, SpaceTime)
             assert st_loaded == st
