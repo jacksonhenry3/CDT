@@ -1,13 +1,18 @@
+import random
+
+import platform
+if platform.system() == 'Darwin':
+    import matplotlib
+    matplotlib.use('MacOSX')
+import matplotlib.pyplot as plt
 import networkx
 import plotly.graph_objects as go
 from matplotlib.collections import LineCollection
-import random
+from plotly import graph_objects
+from plotly.offline import iplot, plot
 
 from cdtea.space_time import SpaceTime
 from cdtea.visualization.coordinates import *
-from plotly import graph_objects
-from plotly.offline import iplot, plot
-import matplotlib.pyplot as plt
 
 """
 Valuable details
@@ -315,9 +320,9 @@ def plot_3d_nx(st: SpaceTime, render: bool = True, iterations: int = 50, layout_
         marker=dict(
             # showscale=True,
             # colorscale options
-            #'Greys' | 'YlGnBu' | 'Greens' | 'YlOrRd' | 'Bluered' | 'RdBu' |
-            #'Reds' | 'Blues' | 'Picnic' | 'Rainbow' | 'Portland' | 'Jet' |
-            #'Hot' | 'Blackbody' | 'Earth' | 'Electric' | 'Viridis' |
+            # 'Greys' | 'YlGnBu' | 'Greens' | 'YlOrRd' | 'Bluered' | 'RdBu' |
+            # 'Reds' | 'Blues' | 'Picnic' | 'Rainbow' | 'Portland' | 'Jet' |
+            # 'Hot' | 'Blackbody' | 'Earth' | 'Electric' | 'Viridis' |
             colorscale='Viridis',
             # reversescale=True,
             color=[layer_dict[n] for n in G.nodes()],
@@ -329,23 +334,23 @@ def plot_3d_nx(st: SpaceTime, render: bool = True, iterations: int = 50, layout_
                 xanchor='left',
                 titleside='right'
             )
-            ))
+        ))
 
     fig = graph_objects.Figure(data=[spacelike_edge_trace, timelike_edge_trace, node_trace],
-                    layout=go.Layout(
-                        title='CDT Visualization',
-                        titlefont_size=16,
-                        # showlegend=False,
-                        hovermode='closest',
-                        margin=dict(b=20,l=5,r=5,t=40),
-                        # annotations=[ dict(
-                        #     text="Python code: <a href='https://plotly.com/ipython-notebooks/network-graphs/'> https://plotly.com/ipython-notebooks/network-graphs/</a>",
-                        #     showarrow=False,
-                        #     xref="paper", yref="paper",
-                        #     x=0.005, y=-0.002 ) ],
-                        # xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
-                        # yaxis=dict(showgrid=False, zeroline=False, showticklabels=False)
-                    )
-                    )
+                               layout=go.Layout(
+                                   title='CDT Visualization',
+                                   titlefont_size=16,
+                                   # showlegend=False,
+                                   hovermode='closest',
+                                   margin=dict(b=20, l=5, r=5, t=40),
+                                   # annotations=[ dict(
+                                   #     text="Python code: <a href='https://plotly.com/ipython-notebooks/network-graphs/'> https://plotly.com/ipython-notebooks/network-graphs/</a>",
+                                   #     showarrow=False,
+                                   #     xref="paper", yref="paper",
+                                   #     x=0.005, y=-0.002 ) ],
+                                   # xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+                                   # yaxis=dict(showgrid=False, zeroline=False, showticklabels=False)
+                               )
+                               )
     if render:
         fig.show()

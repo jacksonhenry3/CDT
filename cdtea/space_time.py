@@ -1,6 +1,8 @@
 """
 Trying to use node and face NOT vertex and simplex
 """
+import copy
+import itertools
 import pathlib
 import pickle
 import random
@@ -25,11 +27,15 @@ class SpaceTime(object):
     links, both spacelike and timelike, determines the geometry of the piecewise
     linear manifold represented by the SpaceTime.
     """
+    _NON_SERIALIZABLE_ATTRIBUTES = ('_ordered_nodes',)
+    _SERIALIZABLE_ATTRIBUTES = ('closed', 'nodes', 'node_left', 'node_right', 'node_past', 'node_future', 'faces_containing', 'faces', 'face_dilaton', 'face_x', 'face_t')
+    _GEOMETRIC_ATTRIBUTES = ('nodes', 'node_left', 'node_right', 'node_past', 'node_future', 'faces_containing', 'faces', 'face_dilaton', 'face_x', 'face_t')
+    __slots__ = _NON_SERIALIZABLE_ATTRIBUTES + _SERIALIZABLE_ATTRIBUTES
 
     def __init__(self, nodes: set = None, node_left: dict = None, node_right: dict = None,
                  node_past: dict = None, node_future: dict = None, faces_containing: dict = None,
-                 faces: set = None, face_dilation: dict = None, face_x: dict = None,
-                 face_t: dict = None, dead_references: set = None, closed: bool = True):
+                 faces: set = None, face_dilaton: dict = None, face_x: dict = None,
+                 face_t: dict = None, closed: bool = True):
         super(SpaceTime, self).__init__()
         self.closed = closed
 
@@ -42,12 +48,12 @@ class SpaceTime(object):
         self.faces_containing = {} if faces_containing is None else faces_containing
 
         self.faces = set() if faces is None else faces  # faces is a frozenset of node indices
-        self.face_dilaton = {} if face_dilation is None else face_dilation  # a dict with keys of face tuples and field vals
+        self.face_dilaton = {} if face_dilaton is None else face_dilaton  # a dict with keys of face tuples and field vals
         self.face_x = {} if face_x is None else face_x  # a dict with keys of face tuples space-like connected
         self.face_t = {} if face_t is None else face_t  # a dict with keys of face tuples time-like connected
 
-        # This could be modified to include a list of dead references
-        self.dead_references = set() if dead_references is None else dead_references
+        # stateful cache attributes (performance)
+        self._ordered_nodes = None
 
     def __eq__(self, other):
         """Equivalence between """
@@ -55,16 +61,54 @@ class SpaceTime(object):
             return False
         return self.to_dict() == other.to_dict()
 
+    def __repr__(self):
+        return 'ST({:d}, {:d})'.format(len(self.nodes), len(self.faces))
+
+    def geometric_equal(self, other) -> bool:
+        """ Compares self and others geometric properties"""
+        if not isinstance(other, SpaceTime):
+            return False
+
+        self_dict = self.to_dict(key_filter=list(self._GEOMETRIC_ATTRIBUTES))
+        other_dict = other.to_dict(key_filter=list(other._GEOMETRIC_ATTRIBUTES))
+        for k in self_dict.keys():
+            if self_dict[k] != other_dict[k]:
+                print('oops')
+        return self_dict == other_dict
+
+    def copy(self):
+        """Deepcopy of this SpaceTime"""
+        return SpaceTime.from_dict(copy.deepcopy(self.to_dict()))
+
     @property
     def max_node(self):
         return max(self.nodes)
 
     @property
     def ordered_nodes(self) -> list:
-        return list(sorted(self.nodes))
+        if self._ordered_nodes is None:
+            self._ordered_nodes = list(sorted(self.nodes))
+        return self._ordered_nodes
+
+    def gluing_edges(self, node_subset: typing.List[event.Event] = None) -> typing.List[typing.Tuple[int, str, event.GluingPoint]]:
+        """Find and return all references to gluing points"""
+        edges = []
+        nodes = self.nodes if node_subset is None else [n.key for n in node_subset]
+        for n in nodes:
+            if isinstance(self.node_left[n], event.GluingPoint):
+                edges.append((n, event.PassThruAttr.Left, self.node_left[n]))
+            if isinstance(self.node_right[n], event.GluingPoint):
+                edges.append((n, event.PassThruAttr.Right, self.node_right[n]))
+            for p in self.node_past[n]:
+                if isinstance(p, event.GluingPoint):
+                    edges.append((n, event.PassThruAttr.Past, p))
+            for f in self.node_future[n]:
+                if isinstance(f, event.GluingPoint):
+                    edges.append((n, event.PassThruAttr.Future, f))
+        return edges
 
     def get_random_node(self):
-        return event.Event(self, random.choice(self.nodes))
+        return event.Event(self, random.choice(self.ordered_nodes))
 
     def get_layers(self, n=False):
         """returns a list of lists where each list contains all nodes in a specific layer, contains all nodes """
@@ -80,38 +124,39 @@ class SpaceTime(object):
             if n in used:
                 layers.append(layer)
                 layer = []
-                n = self.node_future[n][0]
+                n = list(sorted(self.node_future[n]))[0]
         return layers
 
-    def add_node(self, n: int = None):
+    def add_key(self, key: int = None):
         """Function for keeping consistency across various lookup dict keys and nodes list"""
-        if n is None:
-            n = self.max_node + 1
+        if key is None:
+            key = self.max_node + 1
         else:
-            if n in self.nodes:
-                raise ValueError('Cannot add node {:d} to spacetime {}, already exists'.format(n, self))
-        self.nodes.add(n)
-        self.node_left[n] = None
-        self.node_right[n] = None
-        self.node_future[n] = []
-        self.node_past[n] = []
-        self.faces_containing[n] = []
+            if key in self.nodes:
+                raise ValueError('Cannot add node {:d} to spacetime {}, already exists'.format(key, self))
+        self.nodes.add(key)
+        self.node_left[key] = None
+        self.node_right[key] = None
+        self.node_future[key] = set()
+        self.node_past[key] = set()
+        self.faces_containing[key] = set()
+        self._ordered_nodes = None
 
-    def remove_node(self, n: int):
+    def remove_key(self, key: int):
         """Function for removing node"""
-        n = event.event_key(n)
-        self.nodes.remove(n)
-        self.node_left.pop(n)
-        self.node_right.pop(n)
-        self.node_future.pop(n)
-        self.node_past.pop(n)
-        self.faces_containing.pop(n)
+        self.nodes.remove(key)
+        self.node_left.pop(key)
+        self.node_right.pop(key)
+        self.node_future.pop(key)
+        self.node_past.pop(key)
+        self.faces_containing.pop(key)
+        self._ordered_nodes = None
 
     # TODO Made redundant by faces_containing dict, remove once fully validated
     def get_faces_containing(self, n: Event):
         # get all simplices that contain a particular vertex
         # TODO add "Face" pass-thru abstraction?
-        return {face for face in self.faces if event.event_key(n) in face}
+        return {face for face in self.faces if n.key in face}
 
     def pop(self, node_list: typing.List[Event]):
         """
@@ -129,11 +174,10 @@ class SpaceTime(object):
         # removes duplicates
         faces = list(set(faces))
         nodes = list(set(nodes))
-        self.dead_references = set(nodes.copy())  # i.e these nodes are no longer in the st
 
         # set the sub_space nodes and faces
         for n in nodes:
-            sub_space.add_node(n=event.event_key(n))
+            sub_space.add_key(key=n.key)
         sub_space.faces = set(faces.copy())
 
         # loop through all removed nodes and remove their properties from self and add them to sub_space
@@ -154,7 +198,7 @@ class SpaceTime(object):
 
         # dont forget to set sub_space dead refrences
         for n in sub_space.nodes:
-            self.remove_node(n)
+            self.remove_key(n)
 
         # remove all faces that contain anything in node_list
         for f in faces:
@@ -165,29 +209,38 @@ class SpaceTime(object):
     def push(self, sub_space):
         """
         This reinserts sub_space
+
+        Warnings:
+            1) This will ONLY work for a subspace that has been cut from THIS spacetime (common usage)
+            2) This will ONLY work for sequential pairs of pop/push. pop/pop/push could fail
         """
-
-        # Check to make sure that sub_space fills self aproapriatly
-        if any(n not in sub_space.nodes for n in self.dead_references):
-            pass
-            # print("sub_space cannot fill space_time gap")
-            # print("dead refrences are {}".format(self.dead_references))
-            # print("sub_space nodes are {}".format(sub_space.nodes))
-            # raise ValueError()
-
         # add a check to make sure that we are inserting unique new nodes
         nodes = sub_space.ordered_nodes
         faces = sub_space.faces
 
-        for n in nodes:
-            self.add_node(n)
+        for s in nodes:
+            self.add_key(s)
 
-        for n, n_s in event.events([self, sub_space], nodes):
-            event.connect_spatial(n_s.left, n)  # n.left = n_s.left
-            event.connect_spatial(n, n_s.right)  # n.right = n_s.right
-            event.connect_temporal(n, past=n_s.past)  # n.past = n_s.past
-            event.connect_temporal(n, future=n_s.future)  # n.future = n_s.future
-            event.set_faces(n, n_s.faces)
+        # Replicate the interior structure from the subspace in the superspace (not gluing)
+        # This step will also add edges that reference "gluing points", however, since
+        # the subspace was cut from THIS space, then all those references should be valid
+        for s, n_s in event.events([self, sub_space], nodes):
+            event.connect_spatial(n_s.left, s)  # n.left = n_s.left
+            event.connect_spatial(s, n_s.right)  # n.right = n_s.right
+            event.connect_temporal(s, past=n_s.past)  # n.past = n_s.past
+            event.connect_temporal(s, future=n_s.future)  # n.future = n_s.future
+            event.set_faces(s, n_s.faces)
+
+        # Compute neighbors to limit gluing to subspace + neighbors
+        gluing_subset = [list(n.neighbors) for n in event.events(self, nodes)]
+        gluing_subset = list(set(itertools.chain(*gluing_subset)))
+        edges = self.gluing_edges(node_subset=gluing_subset)
+        for s, k, t in edges:
+            if k in (event.PassThruAttr.Left, event.PassThruAttr.Right):
+                getattr(self, event.PASS_THRU_ATTR_MAP[k])[s] = int(t)
+            else:
+                getattr(self, event.PASS_THRU_ATTR_MAP[k])[s].remove(t)
+                getattr(self, event.PASS_THRU_ATTR_MAP[k])[s].add(int(t))
 
         for f in faces:
             self.faces.add(f)
@@ -197,30 +250,19 @@ class SpaceTime(object):
             # self.face_x[f] = sub_space.face_x[f]
             # self.face_t[f] = sub_space.face_t[f]
 
-        # This should probably be validated
-        self.dead_nodes = []
-        # Can we get rid of sub_space at this point somehow?
-
-    def to_dict(self):
+    def to_dict(self, key_filter: typing.List[str] = None):
         """Convert a SpaceTime object to a dict containing all the configuration information
 
         Returns:
             dict, with all attributes of the SpaceTime
         """
-        return {
-            'closed': self.closed,
-            'nodes': self.nodes,
-            'node_left': self.node_left,
-            'node_right': self.node_right,
-            'node_past': self.node_past,
-            'node_future': self.node_future,
-            'faces_containing': self.faces_containing,
-            'faces': self.faces,
-            'face_dilation': self.face_dilaton,
-            'face_x': self.face_x,
-            'face_t': self.face_t,
-            'dead_references': self.dead_references,
-        }
+        d = {attr: getattr(self, attr) for attr in self._SERIALIZABLE_ATTRIBUTES}
+        existing_keys = list(d.keys())
+        if key_filter is not None:
+            for k in existing_keys:
+                if k not in key_filter:
+                    d.pop(k)
+        return d
 
     def to_pickle(self, path: typing.Union[str, pathlib.Path] = None):
         """Convert SpaceTime to pickle format
@@ -265,7 +307,7 @@ class SpaceTime(object):
                 key = (n, s) if n < s else (s, n)
                 if key not in edge_types:
                     edge_types[key] = {'type': 'spacelike'}
-            for t in self.node_past[n] + self.node_future[n]:
+            for t in self.node_past[n].union(self.node_future[n]):
                 key = (n, t) if n < t else (t, n)
                 if key not in edge_types:
                     edge_types[key] = {'type': 'timelike'}
@@ -284,8 +326,7 @@ class SpaceTime(object):
         Returns:
             SpaceTime, the reserialized SpaceTime object
         """
-        for key in ('closed', 'nodes', 'node_left', 'node_right', 'node_past', 'node_future',
-                    'faces_containing', 'faces', 'face_dilation', 'face_x', 'face_t', 'dead_references'):
+        for key in SpaceTime.__slots__[1:]:
             if key not in config_dict:
                 raise SerializationError('Missing key {} when attempting to create SpaceTime from dict:\n{}'.format(key, str(config_dict)))
         return SpaceTime(**config_dict)  # pass-thru to init method
@@ -323,7 +364,7 @@ def generate_flat_spacetime(space_size: int, time_size: int):
     for t in range(time_size):
         start = index  # the first index in the current time slice
         for x in range(space_size):
-            spacetime.add_node(index)
+            spacetime.add_key(index)
 
             left = start + (index - 1) % space_size
             right = start + (index + 1) % space_size
@@ -342,9 +383,9 @@ def generate_flat_spacetime(space_size: int, time_size: int):
             past = past_start + (index) % space_size
 
             # these are the time connections of a node
-            spacetime.node_past[index] = [past_left, past]
+            spacetime.node_past[index] = set([past_left, past])
 
-            spacetime.node_future[index] = [future, future_right]
+            spacetime.node_future[index] = set([future, future_right])
 
             # There are twice as many simplices as nodes, so there are 2 faces defined per iteration
             # These are the faces (a different two can be chosen, the only important thing is that they are uniquly defined by the vertex (t,x))

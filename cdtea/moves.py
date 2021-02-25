@@ -4,7 +4,7 @@ This module contains functions that modify a spacetime.
 import cdtea.event as event
 
 
-def move(st, node, future, past):
+def increase(st, node, future, past):
     """
     A move should add one node and 2 faces. we can pop all the structures to be modified out of the dicts and then push
     them back in once they've been modified. This mean we need to know what could get modfified in any given move.
@@ -17,7 +17,7 @@ def move(st, node, future, past):
 
     # increment the total node counter
     new_node_num = max(st.nodes.union(sub_space.nodes)) + 1
-    sub_space.add_node(new_node_num)
+    sub_space.add_key(new_node_num)
 
     # create a node object for easy manipulation. This also automatically adds the node to the sub_space
     new_s = event.Event(sub_space, new_node_num)
@@ -32,33 +32,29 @@ def move(st, node, future, past):
 
     # future changes
     # TODO examine algorithm concept of connection vs Spacetime (e.g. after popping a node out, what does asking for "left" mean?)
-    new_future_set = [future_s]
+    new_future_set = {future_s}
     f = future_s.left
 
     while f in node_s.future and not f.is_gluing_point:
-        new_future_set.append(f)
-        sub_space.node_future[event.event_key(node)].remove(event.event_key(
-            f))  # TODO cleanup the event key coercion by figuring out workaround for node.future.remove()
-        sub_space.node_past[event.event_key(f)].remove(event.event_key(node))
+        new_future_set.add(f)
+        sub_space.node_future[node.key].remove(f.key)  # TODO cleanup the event key coercion by figuring out workaround for node.future.remove()
+        sub_space.node_past[f.key].remove(node.key)
         f = f.left
-    event.connect_temporal(new_s, future=list(set(new_future_set)))
-    old_future_set = list(
-        set(node_s.future) - set(new_future_set)
-    ) + [future_s]
+    event.connect_temporal(new_s, future=new_future_set)
+    old_future_set = node_s.future.difference(new_future_set).union({future_s})
     event.connect_temporal(node_s, future=old_future_set)
     # sub_space.node_past[future].append(new_node)
 
     # past changes
-    new_past_set = [past_s]
+    new_past_set = {past_s}
     p = past_s.left
     while p in node_s.past:
-        new_past_set.append(p)
-        sub_space.node_past[event.event_key(node_s)].remove(event.event_key(p))
-        sub_space.node_future[event.event_key(p)].remove(event.event_key(node_s))
+        new_past_set.add(p)
+        sub_space.node_past[node_s.key].remove(p.key)
+        sub_space.node_future[p.key].remove(node_s.key)
         p = p.left
-
     event.connect_temporal(new_s, past=new_past_set)
-    old_past_set = list(set(node_s.past) - set(new_past_set)) + [past_s]
+    old_past_set = node_s.past.difference(new_past_set).union({past_s})
     event.connect_temporal(node_s, past=old_past_set)
     # sub_space.node_future[past].append(new_node)
 
@@ -126,7 +122,7 @@ def move(st, node, future, past):
     st.push(sub_space)
 
 
-def imove(st, node):
+def decrease(st, node):
     """ merge two spatially adjacent nodes, always merges in one direction?"""
     left = node.left
     sub_space = st.pop([node, left])
@@ -134,42 +130,24 @@ def imove(st, node):
     left_s = event.Event(sub_space, left.key)
     node_s = event.Event(sub_space, node.key)
 
-    new_future = left_s.future
-    new_past = left_s.past
+    new_future = set(left_s.future).union(node_s.future)
+    new_past = set(left_s.past).union(node_s.past)
     new_left = left_s.left
 
-    # once event has symmetric behavior this can be simplified
-    for f in new_future:
-        sub_space.node_past[f.key].remove(left.key)
-        if f not in sub_space.node_future[node.key]:
-            sub_space.node_future[node.key].append(f.key)
-            sub_space.node_past[f.key].append(node.key)
+    event.connect_spatial(new_left, node_s)
+    event.connect_temporal(node_s, past=new_past, future=new_future)
+    event.connect_temporal(left_s, past=set(), future=set())
 
-    for p in new_past:
-        sub_space.node_future[p.key].remove(left.key)
-        if p not in sub_space.node_past[node.key]:
-            sub_space.node_past[node.key].append(p.key)
-            sub_space.node_future[p.key].append(node.key)
-
-    sub_space.node_left[node.key] = new_left.key
-    sub_space.node_right[new_left.key] = node.key
-
-    sub_space.nodes.remove(left.key)
-    del sub_space.node_left[left.key]
-    del sub_space.node_right[left.key]
-    del sub_space.node_past[left.key]
-    del sub_space.node_future[left.key]
-    del sub_space.faces_containing[left.key]
-
-    faces = sub_space.get_faces_containing(left.key)
+    sub_space.remove_key(left_s.key)
+    faces = sub_space.get_faces_containing(left)
 
     sub_space.faces = [x for x in sub_space.faces if x not in faces]
     for face in faces:
         new_face = []
-        if node not in face:
+        if node.key not in face:
             for n in face:
-                if n == left:
-                    n = node
+                if n == left.key:
+                    n = node.key
                 new_face.append(n)
             sub_space.faces.append(frozenset(new_face))
             sub_space.face_dilaton[frozenset(new_face)] = -1
