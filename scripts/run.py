@@ -3,7 +3,7 @@ import random
 from cdtea.visualization import plot_st
 from cdtea.space_time import SpaceTime
 from cdtea.space_time import generate_flat_spacetime
-from cdtea.modifications import move,imove
+from cdtea.moves import increase,decrease
 from cdtea.event import Event
 def main():
 
@@ -17,7 +17,7 @@ def main():
         n = FST.get_random_node()
         f = random.choice(list(n.future))
         p = random.choice(list(n.past))
-        move(FST,n, f, p)
+        increase(FST, n, f, p)
     # n = FST.get_random_node()
     # print(n)
     # imove(FST,n)

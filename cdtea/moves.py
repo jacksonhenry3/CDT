@@ -4,7 +4,7 @@ This module contains functions that modify a spacetime.
 import cdtea.event as event
 
 
-def move(st, node, future, past):
+def increase(st, node, future, past):
     """
     A move should add one node and 2 faces. we can pop all the structures to be modified out of the dicts and then push
     them back in once they've been modified. This mean we need to know what could get modfified in any given move.
@@ -122,7 +122,7 @@ def move(st, node, future, past):
     st.push(sub_space)
 
 
-def imove(st, node):
+def decrease(st, node):
     """ merge two spatially adjacent nodes, always merges in one direction?"""
     left = node.left
     sub_space = st.pop([node, left])

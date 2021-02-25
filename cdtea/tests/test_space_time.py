@@ -9,7 +9,7 @@ import networkx
 import pandas
 import pytest
 
-from cdtea import event, modifications, space_time
+from cdtea import event, moves, space_time
 from cdtea.space_time import SpaceTime
 from cdtea.tests import audit
 

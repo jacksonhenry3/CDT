@@ -13,7 +13,7 @@ import typing
 
 import pandas
 
-from cdtea import space_time, modifications
+from cdtea import space_time, moves
 from cdtea.space_time import SpaceTime
 
 
@@ -35,7 +35,7 @@ def make_moves(st: SpaceTime, n: int):
         n = cdt.get_random_node()
         f = random.choice(list(n.future))
         p = random.choice(list(n.past))
-        modifications.move(cdt, n, f, p)
+        moves.increase(cdt, n, f, p)
 
 
 def time_with_inputs(func: types.FunctionType, kwarg_values: typing.Dict[str, typing.List[typing.Any]], kwarg_key_funcs: typing.Dict[str, typing.List[types.FunctionType]] = None):
