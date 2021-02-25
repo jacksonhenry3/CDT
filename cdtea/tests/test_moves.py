@@ -29,7 +29,7 @@ class TestModifications:
         moves.decrease(dst, n)
         assert isinstance(dst, SpaceTime)
 
-    def test_functional_inverses(self):
+    def test_geometric_inverses(self):
         dst = generate_flat_spacetime(3, 3)
         dst_copy = generate_flat_spacetime(3, 3)
         n, f, p = event.events(dst, [4, 7, 1])
@@ -38,9 +38,4 @@ class TestModifications:
         moves.decrease(dst, n)
         assert dst.nodes == dst_copy.nodes
         assert dst.node_left == dst_copy.node_left
-        assert dst.node_right == dst_copy.node_right
-
-        # The above pass, but the below don't, something wrong in move/imove
-        # assert dst.node_past == dst_copy.node_past
-        # assert dst.node_future == dst_copy.node_future
-        # assert dst == dst_copy
+        assert dst.geometric_equal(dst_copy)

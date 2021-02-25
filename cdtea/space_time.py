@@ -62,6 +62,22 @@ class SpaceTime(object):
     def __repr__(self):
         return 'ST({:d}, {:d})'.format(len(self.nodes), len(self.faces))
 
+    def geometric_equal(self, other):
+        """ Compares self and others geometric properties"""
+
+        if not isinstance(other, SpaceTime):
+            return False
+
+        geometric_properties = ["nodes", "node_left", "node_right", "node_past", "node_future", "faces_containing", "faces", "face_x", "face_t"]
+        self_dic = self.to_dict()
+        other_dic = other.to_dict()
+
+        geometric_equality = True
+        for prop in geometric_properties:
+            geometric_equality = geometric_equality and self_dic[prop] == other_dic[prop]
+
+        return geometric_equality
+
     def copy(self):
         """Deepcopy of this SpaceTime"""
         return SpaceTime.from_dict(copy.deepcopy(self.to_dict()))
@@ -231,7 +247,6 @@ class SpaceTime(object):
             self.face_dilaton[f] = sub_space.face_dilaton[f]
             # self.face_x[f] = sub_space.face_x[f]
             # self.face_t[f] = sub_space.face_t[f]
-
 
     def to_dict(self):
         """Convert a SpaceTime object to a dict containing all the configuration information
