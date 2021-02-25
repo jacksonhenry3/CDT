@@ -2,6 +2,7 @@
 Trying to use node and face NOT vertex and simplex
 """
 import copy
+import itertools
 import pathlib
 import pickle
 import random
@@ -230,10 +231,11 @@ class SpaceTime(object):
             event.connect_temporal(s, future=n_s.future)  # n.future = n_s.future
             event.set_faces(s, n_s.faces)
 
-        gluing_subset = set()
-        for n in event.events(self, nodes):
-            gluing_subset = gluing_subset.union(n.neighbors)
-        for s, k, t in self.gluing_edges(node_subset=gluing_subset):
+        # Compute neighbors to limit gluing to subspace + neighbors
+        gluing_subset = [list(n.neighbors) for n in event.events(self, nodes)]
+        gluing_subset = list(set(itertools.chain(*gluing_subset)))
+        edges = self.gluing_edges(node_subset=gluing_subset)
+        for s, k, t in edges:
             if k in (event.PassThruAttr.Left, event.PassThruAttr.Right):
                 getattr(self, event.PASS_THRU_ATTR_MAP[k])[s] = int(t)
             else:
