@@ -100,8 +100,6 @@ def increase(st, node, future, past):
         sub_space.faces.append(new_face)
         sub_space.face_dilaton[new_face] = 100
 
-    righmost_future = future_s
-
     sub_space.faces.append(frozenset({node_s.key, new_s.key, future_s.key}))
     sub_space.face_dilaton[frozenset({node_s.key, new_s.key, future_s.key})] = 1
     sub_space.faces.append(frozenset({node_s.key, new_s.key, past_s.key}))
@@ -116,6 +114,15 @@ def increase(st, node, future, past):
     sub_space.face_dilaton[frozenset({left.key, new_s.key, leftmost_future.key})] = 1
     sub_space.faces.append(frozenset({left.key, new_s.key, leftmost_past.key}))
     sub_space.face_dilaton[frozenset({left.key, new_s.key, leftmost_past.key})] = -1
+
+    for face in sub_space.faces:
+        if node_s in face:
+            for n in face:
+                sub_space.faces_containing[n].remove(face)
+
+    for face in sub_space.faces:
+        for n in face:
+            sub_space.faces_containing[n].add(face)
 
     event.set_faces(new_s, [])
     event.set_faces(node_s, [])
@@ -138,18 +145,28 @@ def decrease(st, node):
     event.connect_temporal(node_s, past=new_past, future=new_future)
     event.connect_temporal(left_s, past=set(), future=set())
 
+    faces = set(sub_space.faces_containing[left_s.key])
+
+    # remove faces that involve the old node
+    for face in sub_space.faces:
+        if left_s.key in face:
+            for n in face:
+                sub_space.faces_containing[n].remove(face)
     sub_space.remove_key(left_s.key)
-    faces = sub_space.get_faces_containing(left)
 
     sub_space.faces = [x for x in sub_space.faces if x not in faces]
     for face in faces:
         new_face = []
         if node.key not in face:
             for n in face:
-                if n == left.key:
+                if n == left_s.key:
                     n = node.key
                 new_face.append(n)
             sub_space.faces.append(frozenset(new_face))
             sub_space.face_dilaton[frozenset(new_face)] = -1
+
+    for face in sub_space.faces:
+        for n in face:
+            sub_space.faces_containing[n].add(face)
 
     st.push(sub_space)

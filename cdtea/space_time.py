@@ -152,12 +152,6 @@ class SpaceTime(object):
         self.faces_containing.pop(key)
         self._ordered_nodes = None
 
-    # TODO Made redundant by faces_containing dict, remove once fully validated
-    def get_faces_containing(self, n: Event):
-        # get all simplices that contain a particular vertex
-        # TODO add "Face" pass-thru abstraction?
-        return {face for face in self.faces if n.key in face}
-
     def pop(self, node_list: typing.List[Event]):
         """
         This creates a new space-time by removing all nodes adjacent to node and returning that sub_space
@@ -169,7 +163,7 @@ class SpaceTime(object):
         for node in node_list:
             nodes.extend(node.neighbors)
             # update this to use the dict instead (requires some work)
-            faces.extend(self.get_faces_containing(node))
+            faces.extend(self.faces_containing[node.key])
 
         # removes duplicates
         faces = list(set(faces))
@@ -179,6 +173,7 @@ class SpaceTime(object):
         for n in nodes:
             sub_space.add_key(key=n.key)
         sub_space.faces = set(faces.copy())
+        sub_space.faces_containing = {n: self.faces_containing[n] for n in sub_space.nodes}
 
         # loop through all removed nodes and remove their properties from self and add them to sub_space
         # taking care to label gluing points (references to nodes that do not belong to sub_space)
@@ -192,17 +187,16 @@ class SpaceTime(object):
 
         # loop through all removed faces and remove their properties from self and add them to sub_space
         for f in sub_space.faces:
+            self.faces.remove(f)
             sub_space.face_dilaton[f] = self.face_dilaton.pop(f)
+
             # sub_space.face_x[f] = self.face_x.pop(f)
             # sub_space.face_t[f] = self.face_t.pop(f)
 
         # dont forget to set sub_space dead refrences
         for n in sub_space.nodes:
             self.remove_key(n)
-
-        # remove all faces that contain anything in node_list
-        for f in faces:
-            self.faces.remove(f)
+            self.faces_containing[n] = {}
 
         return sub_space
 
@@ -249,6 +243,8 @@ class SpaceTime(object):
             self.face_dilaton[f] = sub_space.face_dilaton[f]
             # self.face_x[f] = sub_space.face_x[f]
             # self.face_t[f] = sub_space.face_t[f]
+            for n in f:
+                self.faces_containing[n].add(f)
 
     def to_dict(self, key_filter: typing.List[str] = None):
         """Convert a SpaceTime object to a dict containing all the configuration information
@@ -419,6 +415,6 @@ def generate_flat_spacetime(space_size: int, time_size: int):
             f2_t = frozenset({index, left, future})
             spacetime.face_t[f2] = f2_t
 
-            spacetime.faces_containing[index] = [f1, f2, f1_l, f2_l, f1_t, f2_t]
+            spacetime.faces_containing[index] = {f1, f2, f1_l, f2_l, f1_t, f2_t}
             index += 1
     return spacetime

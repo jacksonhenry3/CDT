@@ -331,4 +331,4 @@ def set_faces(event: Event, faces: typing.List[frozenset]):
         faces:
             List[frozenset], the faces to assign to the event
     """
-    getattr(event.space_time, PASS_THRU_ATTR_MAP[PassThruAttr.Faces])[event.key] = faces
+    getattr(event.space_time, PASS_THRU_ATTR_MAP[PassThruAttr.Faces])[event.key] = set(faces)
