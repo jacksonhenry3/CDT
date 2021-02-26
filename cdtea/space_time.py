@@ -29,7 +29,7 @@ class SpaceTime(object):
     """
     _NON_SERIALIZABLE_ATTRIBUTES = ('_ordered_nodes',)
     _SERIALIZABLE_ATTRIBUTES = ('closed', 'nodes', 'node_left', 'node_right', 'node_past', 'node_future', 'faces_containing', 'faces', 'face_dilaton', 'face_x', 'face_t')
-    _GEOMETRIC_ATTRIBUTES = ('nodes', 'node_left', 'node_right', 'node_past', 'node_future', 'faces_containing', 'faces', 'face_dilaton', 'face_x', 'face_t')
+    _GEOMETRIC_ATTRIBUTES = ('nodes', 'node_left', 'node_right', 'node_past', 'node_future', 'faces_containing', 'faces', 'face_x', 'face_t')
     __slots__ = _NON_SERIALIZABLE_ATTRIBUTES + _SERIALIZABLE_ATTRIBUTES
 
     def __init__(self, nodes: set = None, node_left: dict = None, node_right: dict = None,
@@ -73,7 +73,7 @@ class SpaceTime(object):
         other_dict = other.to_dict(key_filter=list(other._GEOMETRIC_ATTRIBUTES))
         for k in self_dict.keys():
             if self_dict[k] != other_dict[k]:
-                print('oops')
+                print('{} failed'.format(k))
         return self_dict == other_dict
 
     def copy(self):
@@ -196,7 +196,7 @@ class SpaceTime(object):
         # dont forget to set sub_space dead refrences
         for n in sub_space.nodes:
             self.remove_key(n)
-            self.faces_containing[n] = {}
+            # self.faces_containing[n] = {}
 
         return sub_space
 
@@ -245,6 +245,7 @@ class SpaceTime(object):
             # self.face_t[f] = sub_space.face_t[f]
             for n in f:
                 self.faces_containing[n].add(f)
+
 
     def to_dict(self, key_filter: typing.List[str] = None):
         """Convert a SpaceTime object to a dict containing all the configuration information
