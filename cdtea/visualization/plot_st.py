@@ -181,7 +181,7 @@ def plot_2d(st, offset=2 * pi / 600., get_coords=get_naive_coords, labels=False)
                 avg_y = np.mean(yy)
                 xx = [p - (p - avg_x) / 2 for p in xx]
                 yy = [p - (p - avg_y) / 2 for p in yy]
-                plt.fill(xx, yy, c=(0, 0, 0, 1))
+                plt.fill(xx, yy, c=(0, 0, 0, .6))
 
     edges_past_pointing, edges_future_pointing, edges_left_pointing, edges_right_pointing = [], [], [], []
 
