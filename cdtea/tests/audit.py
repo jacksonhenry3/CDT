@@ -151,3 +151,13 @@ def degree(st: SpaceTime) -> DegreeSummary:
         nodes_by_degree[d].append(n)
     nodes_missing = pandas.DataFrame(data=nodes_missing, columns=['Node', 'Type', 'Value'])
     return DegreeSummary(degree=nodes_by_degree, missing=nodes_missing)
+
+def test_face_contasining_faces_in_st(st: SpaceTime):
+    """make sure all faces in faces containing are in space_time"""
+    status = True
+    for node in st.nodes:
+        for face in st.faces_containing[node]:
+            if face not in st.faces:
+                print(face)
+                status = False
+    return(status)

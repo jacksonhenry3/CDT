@@ -59,6 +59,13 @@ def increase(st, node, future, past):
     # sub_space.node_future[past].append(new_node)
 
     # face changes
+
+    # remove old faces from faces_containing
+    for face in sub_space.faces:
+        if node_s.key in face:
+            for n in face:
+                sub_space.faces_containing[n].remove(face)
+
     # remove old faces
     sub_space.faces = []
 
@@ -114,11 +121,6 @@ def increase(st, node, future, past):
     sub_space.face_dilaton[frozenset({left.key, new_s.key, leftmost_future.key})] = 1
     sub_space.faces.append(frozenset({left.key, new_s.key, leftmost_past.key}))
     sub_space.face_dilaton[frozenset({left.key, new_s.key, leftmost_past.key})] = -1
-
-    for face in sub_space.faces:
-        if node_s in face:
-            for n in face:
-                sub_space.faces_containing[n].remove(face)
 
     for face in sub_space.faces:
         for n in face:
