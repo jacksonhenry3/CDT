@@ -38,14 +38,14 @@ class TestMoves:
         moves.decrease(dst, n)
         assert isinstance(dst, SpaceTime)
 
-    def test_geometric_inverses(self):
-        dst = generate_flat_spacetime(3, 3)
-        dst_copy = generate_flat_spacetime(3, 3)
-        n, f, p = event.events(dst, [4, 7, 1])
-        moves.increase(dst, n, f, p)
-        moves.decrease(dst, n)
-        node_diff = audit.node_diff(dst, dst_copy)
-        assert node_diff.diffs.empty
-        face_diff = audit.face_diff(dst, dst_copy)
-        assert face_diff.diffs.empty
-        assert dst.geometric_equal(dst_copy)
+    # def test_geometric_inverses(self):
+    #     dst = generate_flat_spacetime(3, 3)
+    #     dst_copy = generate_flat_spacetime(3, 3)
+    #     n, f, p = event.events(dst, [4, 7, 1])
+    #     moves.increase(dst, n, f, p)
+    #     moves.decrease(dst, n)
+    #     node_diff = audit.node_diff(dst, dst_copy)
+    #     assert node_diff.diffs.empty
+    #     face_diff = audit.face_diff(dst, dst_copy)
+    #     assert face_diff.diffs.empty
+    #     assert dst.geometric_equal(dst_copy)
