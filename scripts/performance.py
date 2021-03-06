@@ -31,7 +31,7 @@ def make_spacetime(size: int):
 
 def make_moves(st: SpaceTime, n: int):
     cdt = st.copy()  # work on new spacetime
-    for i in range(1000):
+    for i in range(n):
         n = cdt.get_random_node()
         f = random.choice(list(n.future))
         p = random.choice(list(n.past))
@@ -61,11 +61,14 @@ def time_with_inputs(func: types.FunctionType, kwarg_values: typing.Dict[str, ty
 
 
 def main():
-    sizes = [10, 20, 30, 50, 80, 100, 150, 200, 500, 1000]
+    ns = [100, 500, 1000, 5000, 10000]#, 50000, 100000] #, 500000, 1000000]
+    # sizes = [10, 20, 30, 50, 80, 100]#, 150, 200, 500, 1000]
+    sizes = [100, 200, 500, 1000]  # , 150, 200, 500, 1000]
     spacetimes = [make_spacetime(s) for s in sizes]
 
+
     kwarg_values = {
-        'n': [10, 50, 100, 500, 1000, 5000, 10000, 50000, 100000, 500000, 1000000],
+        'n': ns,
         'st': spacetimes,
     }
 
@@ -76,7 +79,7 @@ def main():
     res = time_with_inputs(make_moves, kwarg_values, kwarg_key_funcs)
     df = pandas.DataFrame(data=[list(k + v) for k, v in sorted(res.items(), key=lambda p: p[0])],
                           columns=list(sorted(kwarg_values.keys())) + ['Start', 'Stop', 'Time'])
-    df.to_csv('performance.csv', index=False)
+    df.to_csv('performance_large.csv', index=False)
 
 
 if __name__ == '__main__':
