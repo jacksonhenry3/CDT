@@ -56,16 +56,13 @@ def simulate(st: SpaceTime, iters: int, cos_const: float = physics.STEADY_GROWTH
 
         # Perform either randomly according to Metropolis algorithm
         if random.random() < prob_increase:
-            print('increasing')
             moves.increase(st, chosen_node, chosen_future, chosen_past)
 
         if random.random() < prob_decrease:
-            print('decreasing')
             moves.decrease(st, chosen_node)
 
         # Optionally sample
         if sampling and (i % sampling_interval == 0):
-            print('sampling')
             for k in sampling_funcs:
                 samples[k].append(sampling_funcs[k](st))
 
