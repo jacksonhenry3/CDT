@@ -147,9 +147,9 @@ def faces(space_time, keys: typing.Union[frozenset, typing.Iterable[frozenset]] 
         List[Event], a list of Events corresponding to the order of the given iterable of keys
     """
     if isinstance(space_time, Iterable):  # TODO more thorough check in case we make spacetime iterable..
-        return list(zip(*[events(st, keys) for st in space_time]))
+        return list(zip(*[Face(st, keys) for st in space_time]))
     if keys is None:
         keys = space_time.faces
-    if isinstance(keys, Iterable):
-        return [Event(space_time=space_time, event_key=k) for k in keys]
-    return Event(space_time=space_time, event_key=keys)
+    if isinstance(list(keys)[0], Iterable) and isinstance(keys, Iterable):
+        return [Face(space_time=space_time, nodes=k) for k in keys]
+    return Face(space_time=space_time, nodes=keys)
