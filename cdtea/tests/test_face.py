@@ -30,14 +30,15 @@ class TestFace:
         f = face.Face(space_time=dst, nodes=frozenset([0, 1, 2]))
         assert repr(f) == 'Face(ST4, {0, 1, 2})'
     #
-    # def test_face_pass_thru_getattr(self):
-    #     """Test event getattr behavior for passthru attributes"""
-    #     dst = space_time.generate_flat_spacetime(3, 3)
-    #     print(face.faces(dst))
-    #     face_list = [frozenset({3, 4, 7}), frozenset({3, 4, 7})]
-    #     e0, e1, e2, e3 = face.faces(dst,face_list)
-    #     assert e0.right == e3
-        # assert e3.left == e0
+    def test_face_pass_thru_getattr(self):
+        """Test event getattr behavior for passthru attributes"""
+        dst = space_time.generate_flat_spacetime(3, 3)
+        face_list = [frozenset({2, 3, 5}), frozenset({1, 2, 5}), frozenset({3, 5, 6})]
+        e0, e1, e2 = face.faces(dst, face_list)
+        assert e0.left == e1
+        assert e1.right == e0
+        assert e0.temporal_neighbor == e2
+        assert e0.type == 1
     #
     def test_face_safe_getattr(self):
         """Test event getattr behavior for non passthru attributes"""
@@ -49,18 +50,18 @@ class TestFace:
     def test_face_hash(self):
         """Test Event Hash"""
         dst_1 = space_time.generate_flat_spacetime(2, 2)
-        e0_1, *_ = face.faces(dst_1)
+        f0_1, *_ = face.faces(dst_1)
 
         dst_2 = space_time.generate_flat_spacetime(2, 2)
-        e0_2, *_ = face.faces(dst_2)
+        f0_2, *_ = face.faces(dst_2)
 
-        assert hash(e0_1) == hash(e0_2)
-    #
-    # def test_spatial_neighbors(self):
-    #     """Test spatial neighbors"""
-    #     dst = space_time.generate_flat_spacetime(3, 3)
-    #     e0, e1, e2, e3, e4, e5, e6, e7, e8 = event.events(dst, range(9))
-    #     assert e0.spatial_neighbors == {e2, e1}
+        assert hash(f0_1) == hash(f0_2)
+
+    def test_spatial_neighbors(self):
+        """Test spatial neighbors"""
+        dst = space_time.generate_flat_spacetime(3, 3)
+        e0, e1, e2, e3, e4, e5, e6, e7, e8 = face.faces(dst, range(9))
+        assert e0.spatial_neighbors == {e2, e1}
     #
     # def test_temporal_neighbors(self):
     #     """Test temporal neighbors"""
