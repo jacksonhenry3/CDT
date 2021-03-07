@@ -60,17 +60,14 @@ class TestFace:
     def test_spatial_neighbors(self):
         """Test spatial neighbors"""
         dst = space_time.generate_flat_spacetime(3, 3)
-        e0, e1, e2, e3, e4, e5, e6, e7, e8 = face.faces(dst, range(9))
-        assert e0.spatial_neighbors == {e2, e1}
-    #
-    # def test_temporal_neighbors(self):
-    #     """Test temporal neighbors"""
-    #     dst = space_time.generate_flat_spacetime(3, 3)
-    #     e0, e1, e2, e3, e4, e5, e6, e7, e8 = event.events(dst, range(9))
-    #     assert e0.temporal_neighbors == {e8, e6, e3, e4}
-    #
-    # def test_neighbors(self):
-    #     """Test neighbors"""
-    #     dst = space_time.generate_flat_spacetime(3, 3)
-    #     e0, e1, e2, e3, e4, e5, e6, e7, e8 = event.events(dst, range(9))
-    #     assert e0.neighbors == {e2, e1, e8, e6, e3, e4}
+        face_list = [frozenset({2, 3, 5}), frozenset({1, 2, 5}), frozenset({1, 4, 5})]
+        e0, e1, e2 = face.faces(dst, face_list)
+        assert e1.spatial_neighbors == {e0, e2}
+
+
+    def test_neighbors(self):
+        """Test neighbors"""
+        dst = space_time.generate_flat_spacetime(3, 3)
+        face_list = [frozenset({2, 3, 5}), frozenset({1, 2, 5}), frozenset({1, 4, 5}),frozenset({1, 2, 7})]
+        e0, e1, e2, e3 = face.faces(dst, face_list)
+        assert e1.neighbors == {e0, e2, e3}
