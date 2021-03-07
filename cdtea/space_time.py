@@ -345,7 +345,7 @@ class SpaceTime(object):
         if data is not None:
             return pickle.loads(data)
 
-        path = path if isinstance(path, pathlib.Path) else pathlib.path(path)
+        path = path if isinstance(path, pathlib.Path) else pathlib.Path(path)
         with open(path.as_posix(), 'rb') as fid:
             return pickle.load(fid)
 
