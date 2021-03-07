@@ -390,7 +390,9 @@ def generate_flat_spacetime(space_size: int, time_size: int):
             f2 = frozenset({index, left, past_left})
 
             spacetime.faces.add(f1)
+            spacetime.face_type[f1] = 0
             spacetime.faces.add(f2)
+            spacetime.face_type[f2] = 1
 
             # This is where we chose the initial dilaton values for each simplex
             spacetime.face_dilaton[f1] = 1
