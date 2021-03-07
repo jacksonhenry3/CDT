@@ -15,6 +15,7 @@ from plotly.offline import iplot, plot
 from statistics import mean
 from cdtea.space_time import SpaceTime
 from cdtea.visualization.coordinates import *
+from cdtea import face as Face
 
 """
 Valuable details
@@ -164,28 +165,62 @@ def plot_2d(st, offset=2 * pi / 600., get_coords=get_naive_coords, labels=False)
         u = theta_t[n.key]
         coords[n.key] = (v, u)
 
-    x = [coords[n][0] for n in st.nodes]
-    y = [coords[n][1] for n in st.nodes]
+
 
     face_coordinate = {}
-    for face in st.faces:
-        face_lst = list(face)
+    face_is_display = {}
+    for face in Face.faces(st):
+        face_lst = list(face.nodes)
         xx, yy = [], []
+        for n in face_lst:
+            xx.append(theta_x[n])
+            yy.append(theta_t[n])
+        avg_x = np.mean(xx)
+        avg_y = np.mean(yy)
+        xx = [p - (p - avg_x) / 2 for p in xx]
+        yy = [p - (p - avg_y) / 2 for p in yy]
+        face_coordinate[face] = (avg_x, avg_y)
+        face_is_display[face] = False
         if max([abs(theta_t[face_lst[0]] - theta_t[face_lst[1]]), abs(theta_t[face_lst[0]] - theta_t[face_lst[2]])]) < pi:
             if max([abs(theta_x[face_lst[0]] - theta_x[face_lst[1]]), abs(theta_x[face_lst[0]] - theta_x[face_lst[2]])]) < pi:
-                for n in face_lst:
-                    xx.append(theta_x[n])
-                    yy.append(theta_t[n])
-                avg_x = np.mean(xx)
-                avg_y = np.mean(yy)
-                xx = [p - (p - avg_x) / 2 for p in xx]
-                yy = [p - (p - avg_y) / 2 for p in yy]
-                plt.fill(xx, yy, c=(0, 0, 0, .6))
+                face_is_display[face] = True
+                c = (.5, 0, 0, .6)
+                if face.type == 0:
+                    c = (0, 0, .5, .6)
+                plt.fill(xx, yy, c=c)
 
                 if labels:
-                    face_coordinate[face] = (avg_x, avg_y)
+                    plt.annotate(set(face.nodes), (avg_x, avg_y), va="center", ha="center", c="white")
 
-                    plt.annotate(set(face), (avg_x, avg_y), va="center", ha="center", c="white")
+    face_right_connections = []
+    face_left_connections = []
+    face_time_connections = []
+    for face in Face.faces(st):
+        x, y = face_coordinate[face]
+        x_r, y_r = face_coordinate[face.right]
+        x_l, y_l = face_coordinate[face.left]
+        x_t, y_t = face_coordinate[face.temporal_neighbor]
+
+        # right
+        if face_is_display[face] and face_is_display[face.right]:
+            if abs(y - y_r) < 1:
+                if abs(x - x_r) < 1:
+                    face_right_connections.append([(x, y-offset), (x_r, y_r-offset), ])
+        # left
+        if face_is_display[face] and face_is_display[face.left]:
+            if abs(y - y_l) < 1:
+                if abs(x - x_l) < 1:
+                    face_left_connections.append([(x, y+offset), (x_l, y_l+offset), ])
+
+        # temporal
+        if face_is_display[face] and face_is_display[face.temporal_neighbor]:
+            if abs(y - y_t) < 1:
+                if abs(x - x_t) < 1:
+                    if face.type == 0:
+                        face_time_connections.append([(x+offset/2., y), (x_t+offset/2., y_t), ])
+                    else:
+                        face_time_connections.append([(x-offset/2., y), (x_t-offset/2., y_t), ])
+
 
     edges_past_pointing, edges_future_pointing, edges_left_pointing, edges_right_pointing = [], [], [], []
 
@@ -216,12 +251,20 @@ def plot_2d(st, offset=2 * pi / 600., get_coords=get_naive_coords, labels=False)
     plt.gca().add_collection(LineCollection(edges_left_pointing, color=(0, 1, 0, 1), antialiaseds=True, linewidth=0.6, ))
     plt.gca().add_collection(LineCollection(edges_right_pointing, color=(.5, 0, .5, 1), antialiaseds=True, linewidth=0.6, ))
 
+    plt.gca().add_collection(LineCollection(face_right_connections, color=(1, 0, 0, 1), antialiaseds=True, linewidth=.6, ))
+    plt.gca().add_collection(LineCollection(face_left_connections, color=(0, 0, 1, 1), antialiaseds=True, linewidth=.6, ))
+    plt.gca().add_collection(LineCollection(face_time_connections, color=(0, 1, 0, 1), antialiaseds=True, linewidth=.6, ))
+
+
+
     s = 100
     if labels == True:
         for n in st.nodes:
             plt.annotate(n, coords[n], va="center", ha="center", c="black")
 
         s = 600
+    x = [coords[n][0] for n in st.nodes]
+    y = [coords[n][1] for n in st.nodes]
     plt.scatter(x, y, color="white", zorder=2, s=s, edgecolors="black")
 
     plt.axis("off")
@@ -288,7 +331,9 @@ def plot_3d_nx(st: SpaceTime, render: bool = True, iterations: int = 50, layout_
     fig = graph_objects.Figure(data=[spacelike_edge_trace, timelike_edge_trace, node_trace], layout=go.Layout(title='CDT Visualization', titlefont_size=16,  # showlegend=False,
                                                                                                               hovermode='closest', margin=dict(b=20, l=5, r=5, t=40),
                                                                                                               # annotations=[ dict(
-                                                                                                              #     text="Python code: <a href='https://plotly.com/ipython-notebooks/network-graphs/'> https://plotly.com/ipython-notebooks/network-graphs/</a>",
+                                                                                                              #     text="Python code: <a
+                                                                                                              #     href='https://plotly.com/ipython-notebooks/network-graphs/'>
+                                                                                                              #     https://plotly.com/ipython-notebooks/network-graphs/</a>",
                                                                                                               #     showarrow=False,
                                                                                                               #     xref="paper", yref="paper",
                                                                                                               #     x=0.005, y=-0.002 ) ],
