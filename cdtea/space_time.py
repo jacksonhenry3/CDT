@@ -28,14 +28,13 @@ class SpaceTime(object):
     linear manifold represented by the SpaceTime.
     """
     _NON_SERIALIZABLE_ATTRIBUTES = ('_ordered_nodes',)
-    _SERIALIZABLE_ATTRIBUTES = ('closed', 'nodes', 'node_left', 'node_right', 'node_past', 'node_future', 'faces_containing', 'faces', 'face_dilaton', 'face_x', 'face_t')
-    _GEOMETRIC_ATTRIBUTES = ('nodes', 'node_left', 'node_right', 'node_past', 'node_future', 'faces_containing', 'faces', 'face_x', 'face_t')
+    _SERIALIZABLE_ATTRIBUTES = (
+        'closed', 'nodes', 'node_left', 'node_right', 'node_past', 'node_future', 'faces_containing', 'faces', 'face_dilaton', 'face_left', 'face_right', 'face_t', 'face_type')
+    _GEOMETRIC_ATTRIBUTES = ('nodes', 'node_left', 'node_right', 'node_past', 'node_future', 'faces_containing', 'faces', 'face_left', 'face_right', 'face_t', 'face_type')
     __slots__ = _NON_SERIALIZABLE_ATTRIBUTES + _SERIALIZABLE_ATTRIBUTES
 
-    def __init__(self, nodes: set = None, node_left: dict = None, node_right: dict = None,
-                 node_past: dict = None, node_future: dict = None, faces_containing: dict = None,
-                 faces: set = None, face_dilaton: dict = None, face_x: dict = None,
-                 face_t: dict = None, closed: bool = True):
+    def __init__(self, nodes: set = None, node_left: dict = None, node_right: dict = None, node_past: dict = None, node_future: dict = None, faces_containing: dict = None,
+                 faces: set = None, face_dilaton: dict = None, face_left: dict = None, face_right: dict = None, face_t: dict = None, face_type: dict = None, closed: bool = True):
         super(SpaceTime, self).__init__()
         self.closed = closed
 
@@ -49,8 +48,10 @@ class SpaceTime(object):
 
         self.faces = set() if faces is None else faces  # faces is a frozenset of node indices
         self.face_dilaton = {} if face_dilaton is None else face_dilaton  # a dict with keys of face tuples and field vals
-        self.face_x = {} if face_x is None else face_x  # a dict with keys of face tuples space-like connected
+        self.face_left = {} if face_left is None else face_left  # a dict with keys of face tuples space-like connected
+        self.face_right = {} if face_right is None else face_right  # a dict with keys of face tuples space-like connected
         self.face_t = {} if face_t is None else face_t  # a dict with keys of face tuples time-like connected
+        self.face_type = {} if face_type is None else face_type
 
         # stateful cache attributes (performance)
         self._ordered_nodes = None
@@ -190,13 +191,11 @@ class SpaceTime(object):
             self.faces.remove(f)
             sub_space.face_dilaton[f] = self.face_dilaton.pop(f)
 
-            # sub_space.face_x[f] = self.face_x.pop(f)
-            # sub_space.face_t[f] = self.face_t.pop(f)
+            # sub_space.face_x[f] = self.face_x.pop(f)  # sub_space.face_t[f] = self.face_t.pop(f)
 
         # dont forget to set sub_space dead refrences
         for n in sub_space.nodes:
-            self.remove_key(n)
-            # self.faces_containing[n] = {}
+            self.remove_key(n)  # self.faces_containing[n] = {}
 
         return sub_space
 
@@ -245,7 +244,6 @@ class SpaceTime(object):
             # self.face_t[f] = sub_space.face_t[f]
             for n in f:
                 self.faces_containing[n].add(f)
-
 
     def to_dict(self, key_filter: typing.List[str] = None):
         """Convert a SpaceTime object to a dict containing all the configuration information
@@ -354,7 +352,9 @@ class SpaceTime(object):
 
 def generate_flat_spacetime(space_size: int, time_size: int):
     """
-    There is a lot of 'frontloaded thought' here. Very possible a source of errors. I Have done some initial validation by inspecting the adjacency matrices. I'm fairly confident that the node structure is correct. The simplex structure sems reasonable but i have less control over the ordering so it isn't as clear. A 3d plot would be a good idea to make sure the simplices are all defined correctly with correct neighbors. Wouldnt hurt to ha e that for the vertices either.
+    There is a lot of 'frontloaded thought' here. Very possible a source of errors. I Have done some initial validation by inspecting the adjacency matrices. I'm fairly
+    confident that the node structure is correct. The simplex structure sems reasonable but i have less control over the ordering so it isn't as clear. A 3d plot would be a good
+    idea to make sure the simplices are all defined correctly with correct neighbors. Wouldnt hurt to ha e that for the vertices either.
     """
     spacetime = SpaceTime()
     index = 0  # this index counts vertices
@@ -390,7 +390,9 @@ def generate_flat_spacetime(space_size: int, time_size: int):
             f2 = frozenset({index, left, past_left})
 
             spacetime.faces.add(f1)
+            spacetime.face_type[f1] = 0
             spacetime.faces.add(f2)
+            spacetime.face_type[f2] = 1
 
             # This is where we chose the initial dilaton values for each simplex
             spacetime.face_dilaton[f1] = 1
@@ -398,17 +400,15 @@ def generate_flat_spacetime(space_size: int, time_size: int):
 
             # This defines the two spatialy adjacent simplices to f1
             f1_l = frozenset({index, future_right, future})
-            f1_r = frozenset(
-                {right, future_right, future_start + (index + 2) % space_size}
-            )
-            spacetime.face_x[f1] = [f1_l, f1_r]
+            f1_r = frozenset({right, future_right, future_start + (index + 2) % space_size})
+            spacetime.face_left[f1] = f1_l
+            spacetime.face_right[f1] = f1_r
 
             # This defines the two spatialy adjacent simplices to f2
             f2_l = frozenset({index, past, past_left})
-            f2_r = frozenset(
-                {left, past_left, past_start + (index - 2) % space_size}
-            )
-            spacetime.face_x[f2] = [f2_l, f2_r]
+            f2_r = frozenset({left, past_left, past_start + (index - 2) % space_size})
+            spacetime.face_left[f2] = f2_r
+            spacetime.face_right[f2] = f2_l
 
             # These are the faces in the future of f1 and f2
             f1_t = frozenset({index, right, past})

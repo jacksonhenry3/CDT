@@ -1,8 +1,10 @@
 import random
 
 import platform
+
 if platform.system() == 'Darwin':
     import matplotlib
+
     matplotlib.use('MacOSX')
 import matplotlib.pyplot as plt
 import networkx
@@ -10,9 +12,10 @@ import plotly.graph_objects as go
 from matplotlib.collections import LineCollection
 from plotly import graph_objects
 from plotly.offline import iplot, plot
-
+from statistics import mean
 from cdtea.space_time import SpaceTime
 from cdtea.visualization.coordinates import *
+from cdtea import face as Face
 
 """
 Valuable details
@@ -28,10 +31,7 @@ mesh_settings = {'opacity': .9}
 no_axis = {'showbackground': False, 'showgrid': False, 'showline': False, 'showticklabels': False, 'ticks': '', 'title': '', 'zeroline': False}
 layout = {'width': 1000, 'height': 1000, 'showlegend': False, 'scene': {'xaxis': no_axis, 'yaxis': no_axis, 'zaxis': no_axis}, 'hovermode': False}
 
-EDGE_TYPE_COLOR = {
-    'spacelike': '#ff0000',
-    'timelike': '#0000ff',
-}
+EDGE_TYPE_COLOR = {'spacelike': '#ff0000', 'timelike': '#0000ff', }
 
 
 def plotly_triangular_mesh(nodes, faces, face_color=None, node_color=None, name="", plot_edges=True, line_set=line_settings, mesh_set=mesh_settings):
@@ -165,23 +165,62 @@ def plot_2d(st, offset=2 * pi / 600., get_coords=get_naive_coords, labels=False)
         u = theta_t[n.key]
         coords[n.key] = (v, u)
 
-    x = [coords[n][0] for n in st.nodes]
-    y = [coords[n][1] for n in st.nodes]
 
-    xx, yy = [], []
-    for face in st.faces:
-        face = list(face)
+
+    face_coordinate = {}
+    face_is_display = {}
+    for face in Face.faces(st):
+        face_lst = list(face.nodes)
         xx, yy = [], []
-        if max([abs(theta_t[face[0]] - theta_t[face[1]]), abs(theta_t[face[0]] - theta_t[face[2]])]) < pi:
-            if max([abs(theta_x[face[0]] - theta_x[face[1]]), abs(theta_x[face[0]] - theta_x[face[2]])]) < pi:
-                for n in face:
-                    xx.append(theta_x[n])
-                    yy.append(theta_t[n])
-                avg_x = np.mean(xx)
-                avg_y = np.mean(yy)
-                xx = [p - (p - avg_x) / 2 for p in xx]
-                yy = [p - (p - avg_y) / 2 for p in yy]
-                plt.fill(xx, yy, c=(0, 0, 0, .6))
+        for n in face_lst:
+            xx.append(theta_x[n])
+            yy.append(theta_t[n])
+        avg_x = np.mean(xx)
+        avg_y = np.mean(yy)
+        xx = [p - (p - avg_x) / 2 for p in xx]
+        yy = [p - (p - avg_y) / 2 for p in yy]
+        face_coordinate[face] = (avg_x, avg_y)
+        face_is_display[face] = False
+        if max([abs(theta_t[face_lst[0]] - theta_t[face_lst[1]]), abs(theta_t[face_lst[0]] - theta_t[face_lst[2]])]) < pi:
+            if max([abs(theta_x[face_lst[0]] - theta_x[face_lst[1]]), abs(theta_x[face_lst[0]] - theta_x[face_lst[2]])]) < pi:
+                face_is_display[face] = True
+                c = (.5, 0, 0, .6)
+                if face.type == 0:
+                    c = (0, 0, .5, .6)
+                plt.fill(xx, yy, c=c)
+
+                if labels:
+                    plt.annotate(set(face.nodes), (avg_x, avg_y), va="center", ha="center", c="white")
+
+    face_right_connections = []
+    face_left_connections = []
+    face_time_connections = []
+    for face in Face.faces(st):
+        x, y = face_coordinate[face]
+        x_r, y_r = face_coordinate[face.right]
+        x_l, y_l = face_coordinate[face.left]
+        x_t, y_t = face_coordinate[face.temporal_neighbor]
+
+        # right
+        if face_is_display[face] and face_is_display[face.right]:
+            if abs(y - y_r) < 1:
+                if abs(x - x_r) < 1:
+                    face_right_connections.append([(x, y-offset), (x_r, y_r-offset), ])
+        # left
+        if face_is_display[face] and face_is_display[face.left]:
+            if abs(y - y_l) < 1:
+                if abs(x - x_l) < 1:
+                    face_left_connections.append([(x, y+offset), (x_l, y_l+offset), ])
+
+        # temporal
+        if face_is_display[face] and face_is_display[face.temporal_neighbor]:
+            if abs(y - y_t) < 1:
+                if abs(x - x_t) < 1:
+                    if face.type == 0:
+                        face_time_connections.append([(x+offset/2., y), (x_t+offset/2., y_t), ])
+                    else:
+                        face_time_connections.append([(x-offset/2., y), (x_t-offset/2., y_t), ])
+
 
     edges_past_pointing, edges_future_pointing, edges_left_pointing, edges_right_pointing = [], [], [], []
 
@@ -193,66 +232,39 @@ def plot_2d(st, offset=2 * pi / 600., get_coords=get_naive_coords, labels=False)
             past_asj = adjacent
             if abs(theta_t[e.key] - theta_t[adjacent.key]) < pi:
                 if abs(theta_x[e.key] - theta_x[adjacent.key]) < pi:
-                    edges_past_pointing.append(
-                        [
-                            coords[e.key] + np.array([0, offset]),
-                            coords[adjacent.key] + np.array([0, offset]),
-                        ]
-                    )
+                    edges_past_pointing.append([coords[e.key] + np.array([0, offset]), coords[adjacent.key] + np.array([0, offset]), ])
         for adjacent in e.future:
             if abs(theta_t[e.key] - theta_t[adjacent.key]) < pi:
                 if abs(theta_x[e.key] - theta_x[adjacent.key]) < pi:
-                    edges_future_pointing.append(
-                        [
-                            coords[e.key] - np.array([0, offset]),
-                            coords[adjacent.key] - np.array([0, offset]),
-                        ]
-                    )
+                    edges_future_pointing.append([coords[e.key] - np.array([0, offset]), coords[adjacent.key] - np.array([0, offset]), ])
 
         if abs(theta_t[e.key] - theta_t[e.left.key]) < pi:
             if abs(theta_x[e.key] - theta_x[e.left.key]) < pi:
-                edges_left_pointing.append(
-                    [
-                        coords[e.key] + np.array([0, offset]),
-                        coords[e.left.key] + np.array([0, offset]),
-                    ]
-                )
+                edges_left_pointing.append([coords[e.key] + np.array([0, offset]), coords[e.left.key] + np.array([0, offset]), ])
 
         if abs(theta_t[e.key] - theta_t[e.right.key]) < pi:
             if abs(theta_x[e.key] - theta_x[e.right.key]) < pi:
-                edges_right_pointing.append(
-                    [
-                        coords[e.key] + np.array([0, -offset]),
-                        coords[e.right.key] + np.array([0, -offset]),
-                    ]
-                )
+                edges_right_pointing.append([coords[e.key] + np.array([0, -offset]), coords[e.right.key] + np.array([0, -offset]), ])
 
-    plt.gca().add_collection(
-        LineCollection(
-            edges_future_pointing, color=(1, 0, 0, 1), antialiaseds=True, linewidth=0.6,
-        )
-    )
-    plt.gca().add_collection(
-        LineCollection(
-            edges_past_pointing, color=(0, 0, 1, 1), antialiaseds=True, linewidth=0.6,
-        )
-    )
-    plt.gca().add_collection(
-        LineCollection(
-            edges_left_pointing, color=(0, 1, 0, 1), antialiaseds=True, linewidth=0.6,
-        )
-    )
-    plt.gca().add_collection(
-        LineCollection(
-            edges_right_pointing, color=(.5, 0, .5, 1), antialiaseds=True, linewidth=0.6,
-        )
-    )
+    plt.gca().add_collection(LineCollection(edges_future_pointing, color=(1, 0, 0, 1), antialiaseds=True, linewidth=0.6, ))
+    plt.gca().add_collection(LineCollection(edges_past_pointing, color=(0, 0, 1, 1), antialiaseds=True, linewidth=0.6, ))
+    plt.gca().add_collection(LineCollection(edges_left_pointing, color=(0, 1, 0, 1), antialiaseds=True, linewidth=0.6, ))
+    plt.gca().add_collection(LineCollection(edges_right_pointing, color=(.5, 0, .5, 1), antialiaseds=True, linewidth=0.6, ))
+
+    plt.gca().add_collection(LineCollection(face_right_connections, color=(1, 0, 0, 1), antialiaseds=True, linewidth=.6, ))
+    plt.gca().add_collection(LineCollection(face_left_connections, color=(0, 0, 1, 1), antialiaseds=True, linewidth=.6, ))
+    plt.gca().add_collection(LineCollection(face_time_connections, color=(0, 1, 0, 1), antialiaseds=True, linewidth=.6, ))
+
+
 
     s = 100
     if labels == True:
         for n in st.nodes:
             plt.annotate(n, coords[n], va="center", ha="center", c="black")
+
         s = 600
+    x = [coords[n][0] for n in st.nodes]
+    y = [coords[n][1] for n in st.nodes]
     plt.scatter(x, y, color="white", zorder=2, s=s, edgecolors="black")
 
     plt.axis("off")
@@ -292,17 +304,11 @@ def plot_3d_nx(st: SpaceTime, render: bool = True, iterations: int = 50, layout_
         timelike_edge_y.extend([y0, y1, None])
         timelike_edge_z.extend([z0, z1, None])
 
-    spacelike_edge_trace = graph_objects.Scatter3d(
-        x=spacelike_edge_x, y=spacelike_edge_y, z=spacelike_edge_z,
-        line=dict(width=0.5, color=EDGE_TYPE_COLOR['spacelike']),
-        hoverinfo='none',
-        mode='lines')
+    spacelike_edge_trace = graph_objects.Scatter3d(x=spacelike_edge_x, y=spacelike_edge_y, z=spacelike_edge_z, line=dict(width=0.5, color=EDGE_TYPE_COLOR['spacelike']),
+                                                   hoverinfo='none', mode='lines')
 
-    timelike_edge_trace = graph_objects.Scatter3d(
-        x=timelike_edge_x, y=timelike_edge_y, z=timelike_edge_z,
-        line=dict(width=0.5, color=EDGE_TYPE_COLOR['timelike']),
-        hoverinfo='none',
-        mode='lines')
+    timelike_edge_trace = graph_objects.Scatter3d(x=timelike_edge_x, y=timelike_edge_y, z=timelike_edge_z, line=dict(width=0.5, color=EDGE_TYPE_COLOR['timelike']),
+                                                  hoverinfo='none', mode='lines')
 
     node_x = []
     node_y = []
@@ -314,43 +320,25 @@ def plot_3d_nx(st: SpaceTime, render: bool = True, iterations: int = 50, layout_
         node_z.append(z)
 
     layer_dict = networkx.get_node_attributes(G, 'layer')
-    node_trace = graph_objects.Scatter3d(
-        x=node_x, y=node_y, z=node_z,
-        mode='markers',
-        marker=dict(
-            # showscale=True,
-            # colorscale options
-            # 'Greys' | 'YlGnBu' | 'Greens' | 'YlOrRd' | 'Bluered' | 'RdBu' |
-            # 'Reds' | 'Blues' | 'Picnic' | 'Rainbow' | 'Portland' | 'Jet' |
-            # 'Hot' | 'Blackbody' | 'Earth' | 'Electric' | 'Viridis' |
-            colorscale='Viridis',
-            # reversescale=True,
-            color=[layer_dict[n] for n in G.nodes()],
-            size=3,
-            opacity=0.8,
-            colorbar=dict(
-                thickness=150,
-                title='Time Layer',
-                xanchor='left',
-                titleside='right'
-            )
-        ))
+    node_trace = graph_objects.Scatter3d(x=node_x, y=node_y, z=node_z, mode='markers', marker=dict(  # showscale=True,
+        # colorscale options
+        # 'Greys' | 'YlGnBu' | 'Greens' | 'YlOrRd' | 'Bluered' | 'RdBu' |
+        # 'Reds' | 'Blues' | 'Picnic' | 'Rainbow' | 'Portland' | 'Jet' |
+        # 'Hot' | 'Blackbody' | 'Earth' | 'Electric' | 'Viridis' |
+        colorscale='Viridis',  # reversescale=True,
+        color=[layer_dict[n] for n in G.nodes()], size=3, opacity=0.8, colorbar=dict(thickness=150, title='Time Layer', xanchor='left', titleside='right')))
 
-    fig = graph_objects.Figure(data=[spacelike_edge_trace, timelike_edge_trace, node_trace],
-                               layout=go.Layout(
-                                   title='CDT Visualization',
-                                   titlefont_size=16,
-                                   # showlegend=False,
-                                   hovermode='closest',
-                                   margin=dict(b=20, l=5, r=5, t=40),
-                                   # annotations=[ dict(
-                                   #     text="Python code: <a href='https://plotly.com/ipython-notebooks/network-graphs/'> https://plotly.com/ipython-notebooks/network-graphs/</a>",
-                                   #     showarrow=False,
-                                   #     xref="paper", yref="paper",
-                                   #     x=0.005, y=-0.002 ) ],
-                                   # xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
-                                   # yaxis=dict(showgrid=False, zeroline=False, showticklabels=False)
-                               )
-                               )
+    fig = graph_objects.Figure(data=[spacelike_edge_trace, timelike_edge_trace, node_trace], layout=go.Layout(title='CDT Visualization', titlefont_size=16,  # showlegend=False,
+                                                                                                              hovermode='closest', margin=dict(b=20, l=5, r=5, t=40),
+                                                                                                              # annotations=[ dict(
+                                                                                                              #     text="Python code: <a
+                                                                                                              #     href='https://plotly.com/ipython-notebooks/network-graphs/'>
+                                                                                                              #     https://plotly.com/ipython-notebooks/network-graphs/</a>",
+                                                                                                              #     showarrow=False,
+                                                                                                              #     xref="paper", yref="paper",
+                                                                                                              #     x=0.005, y=-0.002 ) ],
+                                                                                                              # xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+                                                                                                              # yaxis=dict(showgrid=False, zeroline=False, showticklabels=False)
+                                                                                                              ))
     if render:
         fig.show()

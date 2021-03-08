@@ -74,20 +74,23 @@ class TestSpaceTime:
 class TestSpaceTimeSerialize:
     """Serialization tests for spacetime class"""
 
-    SAMPLE_CONFIG_DICT = {'closed': True, 'face_dilaton': {frozenset({0, 1, 3}): -1, frozenset({0, 1, 2}): -1, frozenset({1, 2, 3}): -1, frozenset({0, 2, 3}): -1},
+    SAMPLE_CONFIG_DICT = {'closed': True, 'nodes': {0, 1, 2, 3}, 'node_left': {0: 1, 1: 0, 2: 3, 3: 2}, 'node_right': {0: 1, 1: 0, 2: 3, 3: 2},
+                          'node_past': {0: {2, 3}, 1: {2, 3}, 2: {0, 1}, 3: {0, 1}}, 'node_future': {0: {2, 3}, 1: {2, 3}, 2: {0, 1}, 3: {0, 1}},
+                          'faces_containing': {0: {frozenset({0, 1, 3}), frozenset({0, 2, 3}), frozenset({0, 1, 2})},
+                                               1: {frozenset({1, 2, 3}), frozenset({0, 1, 3}), frozenset({0, 1, 2})},
+                                               2: {frozenset({1, 2, 3}), frozenset({0, 2, 3}), frozenset({0, 1, 2})},
+                                               3: {frozenset({1, 2, 3}), frozenset({0, 1, 3}), frozenset({0, 2, 3})}},
+                          'faces': {frozenset({1, 2, 3}), frozenset({0, 1, 3}), frozenset({0, 2, 3}), frozenset({0, 1, 2})},
+                          'face_dilaton': {frozenset({0, 1, 3}): -1, frozenset({0, 1, 2}): -1, frozenset({1, 2, 3}): -1, frozenset({0, 2, 3}): -1},
+                          'face_left': {frozenset({0, 1, 3}): frozenset({1, 2, 3}), frozenset({0, 1, 2}): frozenset({0, 2, 3}), frozenset({1, 2, 3}): frozenset({0, 1, 3}),
+                                        frozenset({0, 2, 3}): frozenset({0, 1, 2})},
+                          'face_right': {frozenset({0, 1, 3}): frozenset({0, 2, 3}), frozenset({0, 1, 2}): frozenset({1, 2, 3}), frozenset({1, 2, 3}): frozenset({0, 1, 2}),
+                                         frozenset({0, 2, 3}): frozenset({0, 1, 3})},
                           'face_t': {frozenset({0, 1, 3}): frozenset({0, 1, 2}), frozenset({0, 1, 2}): frozenset({0, 1, 3}), frozenset({1, 2, 3}): frozenset({0, 2, 3}),
                                      frozenset({0, 2, 3}): frozenset({1, 2, 3})},
-                          'face_x': {frozenset({0, 1, 3}): [frozenset({0, 2, 3}), frozenset({1, 2, 3})], frozenset({0, 1, 2}): [frozenset({1, 2, 3}), frozenset({0, 2, 3})],
-                                     frozenset({1, 2, 3}): [frozenset({0, 1, 2}), frozenset({0, 1, 3})], frozenset({0, 2, 3}): [frozenset({0, 1, 3}), frozenset({0, 1, 2})]},
-                          'faces': {frozenset({1, 2, 3}), frozenset({0, 1, 3}), frozenset({0, 2, 3}), frozenset({0, 1, 2})},
-                          'faces_containing': {0: {frozenset({0, 1, 3}), frozenset({0, 2, 3}), frozenset({0, 1, 2})},
-                                               1: {frozenset({0, 1, 2}), frozenset({1, 2, 3}), frozenset({0, 1, 3})},
-                                               2: {frozenset({1, 2, 3}), frozenset({0, 1, 2}), frozenset({0, 2, 3})},
-                                               3: {frozenset({0, 2, 3}), frozenset({0, 1, 3}), frozenset({1, 2, 3})}}, 'node_future': {0: {2, 3}, 1: {2, 3}, 2: {0, 1}, 3: {0, 1}},
-                          'node_left': {0: 1, 1: 0, 2: 3, 3: 2}, 'node_past': {0: {2, 3}, 1: {2, 3}, 2: {0, 1}, 3: {0, 1}}, 'node_right': {0: 1, 1: 0, 2: 3, 3: 2},
-                          'nodes': {0, 1, 2, 3}}
+                          'face_type': {frozenset({0, 1, 3}): 1, frozenset({0, 1, 2}): 1, frozenset({1, 2, 3}): 1, frozenset({0, 2, 3}): 1}}
 
-    SAMPLE_CONFIG_PICKLE_38 = (b'\x80\x04\x95\x94\x02\x00\x00\x00\x00\x00\x00\x8c\x10cdtea.space_time\x94\x8c\tSpaceTime\x94\x93\x94)\x81\x94N}\x94('
+    SAMPLE_CONFIG_PICKLE_38 = (b'\x80\x04\x95\xc0\x02\x00\x00\x00\x00\x00\x00\x8c\x10cdtea.space_time\x94\x8c\tSpaceTime\x94\x93\x94)\x81\x94N}\x94('
                                b'\x8c\x0e_ordered_nodes\x94N\x8c\x06closed\x94\x88\x8c\x05nodes\x94\x8f\x94(K\x00K\x01K\x02K\x03\x90\x8c\tnode_left\x94}\x94('
                                b'K\x00K\x01K\x01K\x00K\x02K\x03K\x03K\x02u\x8c\nnode_right\x94}\x94(K\x00K\x01K\x01K\x00K\x02K\x03K\x03K\x02u\x8c\tnode_past\x94}\x94('
                                b'K\x00\x8f\x94('
@@ -98,12 +101,12 @@ class TestSpaceTimeSerialize:
                                b'K\x00K\x01K\x02\x91\x94\x90K\x02\x8f\x94((K\x01K\x02K\x03\x91\x94(K\x00K\x02K\x03\x91\x94(K\x00K\x01K\x02\x91\x94\x90K\x03\x8f\x94(('
                                b'K\x01K\x02K\x03\x91\x94('
                                b'K\x00K\x01K\x03\x91\x94(K\x00K\x02K\x03\x91\x94\x90u\x8c\x05faces\x94\x8f\x94(h$h\x1ch*h"\x90\x8c\x0cface_dilaton\x94}\x94('
-                               b'h\x1cJ\xff\xff\xff\xffh"J\xff\xff\xff\xffh$J\xff\xff\xff\xffh*J\xff\xff\xff\xffu\x8c\x06face_x\x94}\x94(h\x1c]\x94((K\x00K\x02K\x03\x91\x94('
-                               b'K\x01K\x02K\x03\x91\x94eh"]\x94((K\x01K\x02K\x03\x91\x94(K\x00K\x02K\x03\x91\x94eh$]\x94((K\x00K\x01K\x02\x91\x94('
-                               b'K\x00K\x01K\x03\x91\x94eh*]\x94(('
-                               b'K\x00K\x01K\x03\x91\x94(K\x00K\x01K\x02\x91\x94eu\x8c\x06face_t\x94}\x94(h\x1c(K\x00K\x01K\x02\x91\x94h"(K\x00K\x01K\x03\x91\x94h$('
-                               b'K\x00K\x02K\x03\x91\x94h*('
-                               b'K\x01K\x02K\x03\x91\x94uu\x86\x94b.')
+                               b'h\x1cJ\xff\xff\xff\xffh"J\xff\xff\xff\xffh$J\xff\xff\xff\xffh*J\xff\xff\xff\xffu\x8c\tface_left\x94}\x94(h\x1c(K\x01K\x02K\x03\x91\x94h"('
+                               b'K\x00K\x02K\x03\x91\x94h$('
+                               b'K\x00K\x01K\x03\x91\x94h*(K\x00K\x01K\x02\x91\x94u\x8c\nface_right\x94}\x94(h\x1c(K\x00K\x02K\x03\x91\x94h"(K\x01K\x02K\x03\x91\x94h$('
+                               b'K\x00K\x01K\x02\x91\x94h*('
+                               b'K\x00K\x01K\x03\x91\x94u\x8c\x06face_t\x94}\x94(h\x1c(K\x00K\x01K\x02\x91\x94h"(K\x00K\x01K\x03\x91\x94h$(K\x00K\x02K\x03\x91\x94h*('
+                               b'K\x01K\x02K\x03\x91\x94u\x8c\tface_type\x94}\x94(h\x1cK\x01h"K\x01h$K\x01h*K\x01uu\x86\x94b.')
 
     SAMPLE_CONFIG_PICKLE_37 = (b'\x80\x03ccdtea.space_time\nSpaceTime\nq\x00)\x81q\x01N}q\x02('
                                b'X\x0e\x00\x00\x00_ordered_nodesq\x03NX\x06\x00\x00\x00closedq\x04\x88X\x05\x00\x00\x00nodesq\x05cbuiltins\nset\nq\x06]q\x07('
@@ -120,13 +123,13 @@ class TestSpaceTimeSerialize:
                                b'K\x01K\x02K\x03e\x85qSRqTh-]qU('
                                b'K\x00K\x01K\x03e\x85qVRqWh-]qX(K\x00K\x02K\x03e\x85qYRqZe\x85q[Rq\\uX\x05\x00\x00\x00facesq]h\x06]q^('
                                b'hHh0hZhBe\x85q_Rq`X\x0c\x00\x00\x00face_dilatonqa}qb('
-                               b'h0J\xff\xff\xff\xffhBJ\xff\xff\xff\xffhHJ\xff\xff\xff\xffhZJ\xff\xff\xff\xffuX\x06\x00\x00\x00face_xqc}qd(h0]qe(h-]qf('
-                               b'K\x00K\x02K\x03e\x85qgRqhh-]qi('
-                               b'K\x01K\x02K\x03e\x85qjRqkehB]ql(h-]qm(K\x01K\x02K\x03e\x85qnRqoh-]qp(K\x00K\x02K\x03e\x85qqRqrehH]qs(h-]qt(K\x00K\x01K\x02e\x85quRqvh-]qw('
-                               b'K\x00K\x01K\x03e\x85qxRqyehZ]qz(h-]q{(K\x00K\x01K\x03e\x85q|Rq}h-]q~(K\x00K\x01K\x02e\x85q\x7fRq\x80euX\x06\x00\x00\x00face_tq\x81}q\x82('
-                               b'h0h-]q\x83('
-                               b'K\x00K\x01K\x02e\x85q\x84Rq\x85hBh-]q\x86(K\x00K\x01K\x03e\x85q\x87Rq\x88hHh-]q\x89(K\x00K\x02K\x03e\x85q\x8aRq\x8bhZh-]q\x8c('
-                               b'K\x01K\x02K\x03e\x85q\x8dRq\x8euu\x86q\x8fb.')
+                               b'h0J\xff\xff\xff\xffhBJ\xff\xff\xff\xffhHJ\xff\xff\xff\xffhZJ\xff\xff\xff\xffuX\t\x00\x00\x00face_leftqc}qd(h0h-]qe('
+                               b'K\x01K\x02K\x03e\x85qfRqghBh-]qh('
+                               b'K\x00K\x02K\x03e\x85qiRqjhHh-]qk(K\x00K\x01K\x03e\x85qlRqmhZh-]qn(K\x00K\x01K\x02e\x85qoRqpuX\n\x00\x00\x00face_rightqq}qr(h0h-]qs('
+                               b'K\x00K\x02K\x03e\x85qtRquhBh-]qv('
+                               b'K\x01K\x02K\x03e\x85qwRqxhHh-]qy(K\x00K\x01K\x02e\x85qzRq{hZh-]q|(K\x00K\x01K\x03e\x85q}Rq~uX\x06\x00\x00\x00face_tq\x7f}q\x80(h0h-]q\x81('
+                               b'K\x00K\x01K\x02e\x85q\x82Rq\x83hBh-]q\x84(K\x00K\x01K\x03e\x85q\x85Rq\x86hHh-]q\x87(K\x00K\x02K\x03e\x85q\x88Rq\x89hZh-]q\x8a('
+                               b'K\x01K\x02K\x03e\x85q\x8bRq\x8cuX\t\x00\x00\x00face_typeq\x8d}q\x8e(h0K\x01hBK\x01hHK\x01hZK\x01uu\x86q\x8fb.')
 
     def _sample_pickle(self):
         if PY_VERSION.major != 3 or PY_VERSION.minor not in (7, 8):

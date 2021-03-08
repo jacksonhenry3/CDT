@@ -9,8 +9,8 @@ def is_physically_valid(st: SpaceTime):
     """
 
     #these can be uncommneted once this has been merged with the feature/faces_containing_fix branch
-    # test_faces_containing_size(st)
-    # test_accuracy_of_faces_containing(st)
+    test_faces_containing_size(st)
+    test_accuracy_of_faces_containing(st)
     test_total_neighbors(st)
     test_future(st)
     test_past(st)
