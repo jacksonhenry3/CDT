@@ -190,7 +190,7 @@ def plot_2d(st, offset=2 * pi / 600., get_coords=get_naive_coords, labels=False)
                 plt.fill(xx, yy, c=c)
 
                 if labels:
-                    plt.annotate(set(face.nodes), (avg_x, avg_y), va="center", ha="center", c="white")
+                    plt.annotate(face.key, (avg_x, avg_y), va="center", ha="center", c="white")
 
     face_right_connections = []
     face_left_connections = []
