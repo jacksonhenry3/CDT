@@ -8,11 +8,12 @@ class PassThruAttr:
     Right = 'right'
     Temporal = 'temporal'
     Type = 'type'
+    Nodes = 'nodes'
 
 
 PASS_THRU_ATTR_MAP = {  # Mapping of attribute name in Node object and corresponding lookup-dict in SpaceTime object
     # NOTE: this depends on implementation details of SpaceTime class, and should be updated in tandem
-    PassThruAttr.Left: 'face_left', PassThruAttr.Right: 'face_right', PassThruAttr.Temporal: 'face_t', PassThruAttr.Type: 'face_type'}
+    PassThruAttr.Left: 'face_left', PassThruAttr.Right: 'face_right', PassThruAttr.Temporal: 'face_t', PassThruAttr.Type: 'face_type',PassThruAttr.Nodes: 'face_nodes'}
 FACE_RETURNING_ATTRS = ('left', 'right', 'temporal')
 
 
@@ -35,11 +36,11 @@ class Face:
         self.space_time = space_time
         if isinstance(nodes, Face):
             # TODO check space_time equivalence
-            nodes = nodes.nodes
+            nodes = nodes.key
         # Check that event exists in space_time (consistency)
         if space_time.closed and nodes not in space_time.faces:
             raise ValueError('Face Key {} not defined in spacetime: {}'.format(nodes, space_time))
-        self.nodes = nodes
+        self.key = nodes
 
     def __eq__(self, other):
         """Equality comparison operator
@@ -52,7 +53,7 @@ class Face:
             bool, True if equivalent events, False otherwise
         """
         # TODO add "and other.space_time == self.space_time" once __eq__ defined for SpaceTime
-        return isinstance(other, Face) and (other.space_time == self.space_time) and (other.nodes == self.nodes)
+        return isinstance(other, Face) and (other.space_time == self.space_time) and (other.key == self.key)
 
     def __hash__(self):
         """Make Face hashable
@@ -61,13 +62,13 @@ class Face:
             int, the has value of the Face
         """
         # TODO add spacetime hash
-        return hash(('Face', self.nodes))
+        return hash(('Face', self.key))
 
     def __repr__(self):
         """Define convenient representation for events"""
         # TODO update this to use the SpaceTime repr, now it's just using STN
         # TODO update this to include a time coordinate if possible
-        return 'Face(ST{:d}, {:s})'.format(len(self.space_time.nodes), -1 if self.nodes is None else str(set(self.nodes)))
+        return 'Face(ST{:d}, {:s})'.format(len(self.space_time.key), -1 if self.key is None else str(set(self.key)))
 
     def _get_pass_thru_attr_(self, key: str):
         """Helper private method for looking up pass-thru attributes.For these attributes only,
@@ -82,9 +83,9 @@ class Face:
             multiple neighbors, or faces are requested
         """
         if key in PASS_THRU_ATTR_MAP:
-            value = getattr(self.space_time, PASS_THRU_ATTR_MAP[key])[self.nodes]
+            value = getattr(self.space_time, PASS_THRU_ATTR_MAP[key])[self.key]
             if key in FACE_RETURNING_ATTRS:
-                if isinstance(list(value)[0], Iterable) and isinstance(value, Iterable):
+                if isinstance(value, Iterable):
                     return set([v if v is None else Face(space_time=self.space_time, nodes=v) for v in value])
                 return value if value is None else Face(space_time=self.space_time, nodes=value)
             return value
@@ -97,6 +98,15 @@ class Face:
             List[Face], the future neighbors
         """
         return self._get_pass_thru_attr_(PassThruAttr.Temporal)
+
+    @property
+    def nodes(self):
+        """Pass-thru accessor for right neighbor
+
+        Returns:
+            Face, the right neighbor
+        """
+        return self._get_pass_thru_attr_(PassThruAttr.Nodes)
 
     @property
     def left(self):
@@ -161,7 +171,7 @@ def faces(space_time, keys: typing.Union[frozenset, typing.Iterable[frozenset]] 
         return list(zip(*[Face(st, keys) for st in space_time]))
     if keys is None:
         keys = space_time.faces
-    if isinstance(list(keys)[0], Iterable) and isinstance(keys, Iterable):
+    if isinstance(keys, Iterable):
         return [Face(space_time=space_time, nodes=k) for k in keys]
     return Face(space_time=space_time, nodes=keys)
 
@@ -186,16 +196,16 @@ def connect_spatial(left: Face, right: Face):
     # Set left.right = right
     if left.right != right:
         original_right_of_left = left.right
-        getattr(left.space_time, PASS_THRU_ATTR_MAP[PassThruAttr.Right])[left.nodes] = right.nodes
+        getattr(left.space_time, PASS_THRU_ATTR_MAP[PassThruAttr.Right])[left.key] = right.key
         if original_right_of_left is not None:
-            getattr(original_right_of_left.space_time, PASS_THRU_ATTR_MAP[PassThruAttr.Left])[original_right_of_left.nodes] = None
+            getattr(original_right_of_left.space_time, PASS_THRU_ATTR_MAP[PassThruAttr.Left])[original_right_of_left.key] = None
 
     # Set right.left = left
     if right.left != left:
         original_left_of_right = right.left
-        getattr(right.space_time, PASS_THRU_ATTR_MAP[PassThruAttr.Left])[right.nodes] = left.nodes
+        getattr(right.space_time, PASS_THRU_ATTR_MAP[PassThruAttr.Left])[right.key] = left.key
         if original_left_of_right is not None:
-            getattr(original_left_of_right.space_time, PASS_THRU_ATTR_MAP[PassThruAttr.Right])[original_left_of_right.nodes] = None
+            getattr(original_left_of_right.space_time, PASS_THRU_ATTR_MAP[PassThruAttr.Right])[original_left_of_right.key] = None
 
 
 def connect_temporal(present: Face, t: Face):
@@ -219,13 +229,13 @@ def connect_temporal(present: Face, t: Face):
     # Set left.right = right
     if present.temporal_neighbor != t:
         original_t_of_present = present.temporal_neighbor
-        getattr(present.space_time, PASS_THRU_ATTR_MAP[PassThruAttr.Right])[present.nodes] = t.nodes
+        getattr(present.space_time, PASS_THRU_ATTR_MAP[PassThruAttr.Right])[present.key] = t.key
         if original_t_of_present is not None:
-            getattr(original_t_of_present.space_time, PASS_THRU_ATTR_MAP[PassThruAttr.Left])[original_t_of_present.nodes] = None
+            getattr(original_t_of_present.space_time, PASS_THRU_ATTR_MAP[PassThruAttr.Left])[original_t_of_present.key] = None
 
     # Set t.present = present
     if t.temporal_neighbor != present:
         original_present_of_t = t.temporal_neighbor
-        getattr(t.space_time, PASS_THRU_ATTR_MAP[PassThruAttr.Left])[t.nodes] = present.nodes
+        getattr(t.space_time, PASS_THRU_ATTR_MAP[PassThruAttr.Left])[t.key] = present.key
         if original_present_of_t is not None:
-            getattr(original_present_of_t.space_time, PASS_THRU_ATTR_MAP[PassThruAttr.Right])[original_present_of_t.nodes] = None
+            getattr(original_present_of_t.space_time, PASS_THRU_ATTR_MAP[PassThruAttr.Right])[original_present_of_t.key] = None
