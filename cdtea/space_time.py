@@ -153,6 +153,15 @@ class SpaceTime(object):
         self.faces_containing.pop(key)
         self._ordered_nodes = None
 
+    def remove_face(self, key: frozenset):
+        """Function for removing node"""
+        self.faces.remove(key)
+        self.face_left.pop(key)
+        self.face_right.pop(key)
+        self.face_t.pop(key)
+        self.face_type.pop(key)
+
+
     def pop(self, node_list: typing.List[Event]):
         """
         This creates a new space-time by removing all nodes adjacent to node and returning that sub_space
@@ -190,8 +199,11 @@ class SpaceTime(object):
         for f in sub_space.faces:
             self.faces.remove(f)
             sub_space.face_dilaton[f] = self.face_dilaton.pop(f)
+            sub_space.face_left[f] = self.face_left.pop(f)
+            sub_space.face_right[f] = self.face_right.pop(f)
+            sub_space.face_t[f] = self.face_t.pop(f)
+            sub_space.face_type[f] = self.face_type.pop(f)
 
-            # sub_space.face_x[f] = self.face_x.pop(f)  # sub_space.face_t[f] = self.face_t.pop(f)
 
         # dont forget to set sub_space dead refrences
         for n in sub_space.nodes:
@@ -240,8 +252,11 @@ class SpaceTime(object):
 
         for f in sub_space.faces:
             self.face_dilaton[f] = sub_space.face_dilaton[f]
-            # self.face_x[f] = sub_space.face_x[f]
-            # self.face_t[f] = sub_space.face_t[f]
+            self.face_left[f] = sub_space.face_left[f]
+            self.face_right[f] = sub_space.face_right[f]
+            self.face_t[f] = sub_space.face_t[f]
+            self.face_type[f] = sub_space.face_type[f]
+
             for n in f:
                 self.faces_containing[n].add(f)
 
