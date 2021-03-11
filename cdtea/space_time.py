@@ -453,9 +453,9 @@ def generate_flat_spacetime(space_size: int, time_size: int):
 
             # This defines the two spatially adjacent simplices to f2
             f2_l = f1
-            f2_r = 2 * start + (2 * index + 2) % (2 * space_size)
-            spacetime.face_left[f2] = f2_r
-            spacetime.face_right[f2] = f2_l
+            f2_r = 2 * start + (2 * index - 2) % (2 * space_size)
+            spacetime.face_left[f2] = f2_l
+            spacetime.face_right[f2] = f2_r
 
             # THESE WILL NEED TO BE FIXED
             # These are the faces in the future of f1 and f2
