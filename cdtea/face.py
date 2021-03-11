@@ -164,3 +164,68 @@ def faces(space_time, keys: typing.Union[frozenset, typing.Iterable[frozenset]] 
     if isinstance(list(keys)[0], Iterable) and isinstance(keys, Iterable):
         return [Face(space_time=space_time, nodes=k) for k in keys]
     return Face(space_time=space_time, nodes=keys)
+
+
+def connect_spatial(left: Face, right: Face):
+    """Make a consistent spatial connection between two Faces
+
+    Args:
+        left:
+            Face, the event to be on the left side of the spatial connection
+        left:
+            Face, the event to be on the right side of the spatial connection
+
+    Notes:
+        Edge Consistency:
+            The below code ensures that both ends of edges are maintained in a way that
+            preserves the following consistency relations between events A and B:
+
+                (1) A.right = B    <==>  A = B.left
+                (2) A.left = B     <==>  A = B.right
+    """
+    # Set left.right = right
+    if left.right != right:
+        original_right_of_left = left.right
+        getattr(left.space_time, PASS_THRU_ATTR_MAP[PassThruAttr.Right])[left.nodes] = right.nodes
+        if original_right_of_left is not None:
+            getattr(original_right_of_left.space_time, PASS_THRU_ATTR_MAP[PassThruAttr.Left])[original_right_of_left.nodes] = None
+
+    # Set right.left = left
+    if right.left != left:
+        original_left_of_right = right.left
+        getattr(right.space_time, PASS_THRU_ATTR_MAP[PassThruAttr.Left])[right.nodes] = left.nodes
+        if original_left_of_right is not None:
+            getattr(original_left_of_right.space_time, PASS_THRU_ATTR_MAP[PassThruAttr.Right])[original_left_of_right.nodes] = None
+
+
+def connect_temporal(present: Face, t: Face):
+    """Make a consistent connection between a present event and a time-like connected event
+
+    Args:
+        present:
+            Face, the face for which to update the temporal_connection of
+        t:
+            Face, set the temporal_nieghbor of present equal to this face
+
+
+    Notes:
+        Edge Consistency:
+            The below code ensures that both ends of face connection are maintained in a way that
+            preserves the following consistency relations between events A and B:
+
+                (3) B = A.temporal_neighbor    <==>  A = B.temporal_neighbor
+                (4) B = A.temporal_neighbor    <==>  A = B.temporal_neighbor
+    """
+    # Set left.right = right
+    if present.temporal_neighbor != t:
+        original_t_of_present = present.temporal_neighbor
+        getattr(present.space_time, PASS_THRU_ATTR_MAP[PassThruAttr.Right])[present.nodes] = t.nodes
+        if original_t_of_present is not None:
+            getattr(original_t_of_present.space_time, PASS_THRU_ATTR_MAP[PassThruAttr.Left])[original_t_of_present.nodes] = None
+
+    # Set t.present = present
+    if t.temporal_neighbor != present:
+        original_present_of_t = t.temporal_neighbor
+        getattr(t.space_time, PASS_THRU_ATTR_MAP[PassThruAttr.Left])[t.nodes] = present.nodes
+        if original_present_of_t is not None:
+            getattr(original_present_of_t.space_time, PASS_THRU_ATTR_MAP[PassThruAttr.Right])[original_present_of_t.nodes] = None
