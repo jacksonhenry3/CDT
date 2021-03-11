@@ -457,12 +457,11 @@ def generate_flat_spacetime(space_size: int, time_size: int):
             spacetime.face_left[f2] = f2_l
             spacetime.face_right[f2] = f2_r
 
-            # THESE WILL NEED TO BE FIXED
             # These are the faces in the future of f1 and f2
-            f1_t = future_start * (2 + index * 2)% (2 * space_size)
+            f1_t = (2 * index - 2 * space_size + 1) % (2 * space_size * time_size)
             spacetime.face_t[f1] = f1_t
 
-            f2_t = past_start * (2 + index * 2 - 1)% (2 * space_size)
+            f2_t = (2 * index + 2 * space_size) % (2 * space_size * time_size)
             spacetime.face_t[f2] = f2_t
 
             spacetime.faces_containing[index] = {f1, f2, f1_l, f2_l, f1_t, f2_t}
