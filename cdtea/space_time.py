@@ -29,24 +29,31 @@ class SpaceTime(object):
     """
     _NON_SERIALIZABLE_ATTRIBUTES = ('_ordered_nodes',)
     _SERIALIZABLE_ATTRIBUTES = (
-        'closed', 'nodes', 'node_left', 'node_right', 'node_past', 'node_future', 'faces_containing', 'faces', 'face_dilaton', 'face_left', 'face_right', 'face_t', 'face_type')
-    _GEOMETRIC_ATTRIBUTES = ('nodes', 'node_left', 'node_right', 'node_past', 'node_future', 'faces_containing', 'faces', 'face_left', 'face_right', 'face_t', 'face_type')
+        'closed', 'nodes', 'node_left', 'node_right', 'node_past', 'node_future', 'faces_containing', 'faces', 'face_dilaton', 'face_left', 'face_right', 'face_t', 'face_type',
+        'face_nodes')
+    _GEOMETRIC_ATTRIBUTES = (
+        'nodes', 'node_left', 'node_right', 'node_past', 'node_future', 'faces_containing', 'faces', 'face_left', 'face_right', 'face_t', 'face_type', 'face_nodes')
     __slots__ = _NON_SERIALIZABLE_ATTRIBUTES + _SERIALIZABLE_ATTRIBUTES
 
-    def __init__(self, nodes: set = None, node_left: dict = None, node_right: dict = None, node_past: dict = None, node_future: dict = None, faces_containing: dict = None,
-                 faces: set = None, face_dilaton: dict = None, face_left: dict = None, face_right: dict = None, face_t: dict = None, face_type: dict = None, closed: bool = True):
+    def __init__(self, nodes: set = None, node_left: dict = None, node_right: dict = None, node_past: dict = None, node_future: dict = None,
+
+                 faces_containing: dict = None,
+
+                 faces: set = None, face_dilaton: dict = None, face_left: dict = None, face_right: dict = None, face_t: dict = None, face_type: dict = None, closed: bool = True,
+                 face_nodes: dict = None):
         super(SpaceTime, self).__init__()
         self.closed = closed
 
         # consider adding curvature here aswell
-        self.nodes = set() if nodes is None else nodes  # nodes is just a list of indicies
+        self.nodes = set() if nodes is None else nodes  # nodes is a set of indicies
         self.node_left = {} if node_left is None else node_left  # a dict with node indices as keys
         self.node_right = {} if node_right is None else node_right  # a dict with node indices as keys
         self.node_past = {} if node_past is None else node_past  # a dict with node indices as keys
         self.node_future = {} if node_future is None else node_future  # a dict with node indices as keys
         self.faces_containing = {} if faces_containing is None else faces_containing
 
-        self.faces = set() if faces is None else faces  # faces is a frozenset of node indices
+        self.faces = set() if faces is None else faces  # faces is a set of indicies
+        self.face_nodes = {} if face_nodes is None else face_nodes
         self.face_dilaton = {} if face_dilaton is None else face_dilaton  # a dict with keys of face tuples and field vals
         self.face_left = {} if face_left is None else face_left  # a dict with keys of face tuples space-like connected
         self.face_right = {} if face_right is None else face_right  # a dict with keys of face tuples space-like connected
@@ -86,10 +93,18 @@ class SpaceTime(object):
         return max(self.nodes)
 
     @property
+    def max_face(self):
+        return max(self.faces, default=-1)
+
+    @property
     def ordered_nodes(self) -> list:
         if self._ordered_nodes is None:
             self._ordered_nodes = list(sorted(self.nodes))
         return self._ordered_nodes
+
+    @property
+    def nodes_face(self) -> dict:
+        return {v: k for k, v in self.face_nodes.items()}
 
     def gluing_edges(self, node_subset: typing.List[event.Event] = None) -> typing.List[typing.Tuple[int, str, event.GluingPoint]]:
         """Find and return all references to gluing points"""
@@ -153,6 +168,23 @@ class SpaceTime(object):
         self.faces_containing.pop(key)
         self._ordered_nodes = None
 
+    def add_face(self, nodes: frozenset = None, key: int = None):
+        """Function for keeping consistency across various lookup dict keys and nodes list"""
+        if key is None:
+            key = self.max_face + 1
+        else:
+            if key in self.faces:
+                raise ValueError('Cannot add node {:d} to spacetime {}, already exists'.format(key, self))
+        self.faces.add(key)
+        self.face_left[key] = None
+        self.face_right[key] = None
+        self.face_t[key] = None
+        self.face_type[key] = None
+        self.face_dilaton[key] = None
+        self.face_nodes[key] = nodes
+
+        return key
+
     def remove_face(self, key: frozenset):
         """Function for removing node"""
         self.faces.remove(key)
@@ -160,7 +192,6 @@ class SpaceTime(object):
         self.face_right.pop(key)
         self.face_t.pop(key)
         self.face_type.pop(key)
-
 
     def pop(self, node_list: typing.List[Event]):
         """
@@ -203,7 +234,6 @@ class SpaceTime(object):
             sub_space.face_right[f] = self.face_right.pop(f)
             sub_space.face_t[f] = self.face_t.pop(f)
             sub_space.face_type[f] = self.face_type.pop(f)
-
 
         # dont forget to set sub_space dead refrences
         for n in sub_space.nodes:
@@ -389,24 +419,25 @@ def generate_flat_spacetime(space_size: int, time_size: int):
             past_start = (start - space_size) % (space_size * time_size)
 
             future_right = future_start + (index + 1) % space_size
-            future = future_start + (index) % space_size
+            future_left = future_start + (index - 1) % space_size
+            future = future_start + index % space_size
 
             past_left = past_start + (index - 1) % space_size
-            past = past_start + (index) % space_size
+            past = past_start + index % space_size
 
             # these are the time connections of a node
-            spacetime.node_past[index] = set([past_left, past])
-
-            spacetime.node_future[index] = set([future, future_right])
+            spacetime.node_past[index] = {past_left, past}
+            spacetime.node_future[index] = {future, future_right}
 
             # There are twice as many simplices as nodes, so there are 2 faces defined per iteration
             # These are the faces (a different two can be chosen, the only important thing is that they are uniquly defined by the vertex (t,x))
-            f1 = frozenset({index, right, future_right})
-            f2 = frozenset({index, left, past_left})
+            f1 = spacetime.add_face(frozenset({index, right, future_right}))
+            f2 = spacetime.add_face(frozenset({index, future_right, future}))
 
-            spacetime.faces.add(f1)
+            nodes_face = spacetime.nodes_face
+
+            # define each faces type
             spacetime.face_type[f1] = 0
-            spacetime.faces.add(f2)
             spacetime.face_type[f2] = 1
 
             # This is where we chose the initial dilaton values for each simplex
@@ -414,21 +445,24 @@ def generate_flat_spacetime(space_size: int, time_size: int):
             spacetime.face_dilaton[f2] = -1
 
             # This defines the two spatialy adjacent simplices to f1
-            f1_l = frozenset({index, future_right, future})
-            f1_r = frozenset({right, future_right, future_start + (index + 2) % space_size})
+            f1_l = 2 * start + (2 * index - 1) % (2 * space_size)
+            f1_r = f2
+
             spacetime.face_left[f1] = f1_l
             spacetime.face_right[f1] = f1_r
 
-            # This defines the two spatialy adjacent simplices to f2
-            f2_l = frozenset({index, past, past_left})
-            f2_r = frozenset({left, past_left, past_start + (index - 2) % space_size})
+            # This defines the two spatially adjacent simplices to f2
+            f2_l = f1
+            f2_r = 2 * start + (2 * index + 2) % (2 * space_size)
             spacetime.face_left[f2] = f2_r
             spacetime.face_right[f2] = f2_l
 
+            # THESE WILL NEED TO BE FIXED
             # These are the faces in the future of f1 and f2
-            f1_t = frozenset({index, right, past})
+            f1_t = future_start * (2 + index * 2)% (2 * space_size)
             spacetime.face_t[f1] = f1_t
-            f2_t = frozenset({index, left, future})
+
+            f2_t = past_start * (2 + index * 2 - 1)% (2 * space_size)
             spacetime.face_t[f2] = f2_t
 
             spacetime.faces_containing[index] = {f1, f2, f1_l, f2_l, f1_t, f2_t}
