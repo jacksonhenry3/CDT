@@ -192,6 +192,8 @@ class SpaceTime(object):
         self.face_right.pop(key)
         self.face_t.pop(key)
         self.face_type.pop(key)
+        for n in self.face_nodes[key]:
+            self.faces_containing[n].remove(key)
 
     def pop(self, node_list: typing.List[Event]):
         """

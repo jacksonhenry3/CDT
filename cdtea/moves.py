@@ -196,7 +196,7 @@ def decrease(st, node):
     st.push(sub_space)
 
 
-def new_decrease(st, node):
+def decrease(st, node):
     """merges node.left in to node"""
     # cut out the sub_space that will be effected by the move
     left = node.left
@@ -225,7 +225,6 @@ def new_decrease(st, node):
     faces_for_deletion = []
     for f in face.faces(sub_space):
         if left_s.key in f.nodes:
-
             if node.key in f.nodes:
                 faces_for_deletion.append(f)
             else:
@@ -246,6 +245,7 @@ def new_decrease(st, node):
     for f in face.faces(sub_space, faces_for_deletion):
         face.connect_spatial(f.left, f.right)
         sub_space.remove_face(f.key)
+
 
     sub_space.remove_key(left_s.key)
 
