@@ -203,7 +203,6 @@ class SpaceTime(object):
         faces = []
         for node in node_list:
             nodes.extend(node.neighbors)
-            # update this to use the dict instead (requires some work)
             faces.extend(self.faces_containing[node.key])
 
         # removes duplicates
@@ -234,6 +233,7 @@ class SpaceTime(object):
             sub_space.face_right[f] = self.face_right.pop(f)
             sub_space.face_t[f] = self.face_t.pop(f)
             sub_space.face_type[f] = self.face_type.pop(f)
+            sub_space.face_nodes[f] = self.face_nodes.pop(f)
 
         # dont forget to set sub_space dead refrences
         for n in sub_space.nodes:
@@ -286,8 +286,9 @@ class SpaceTime(object):
             self.face_right[f] = sub_space.face_right[f]
             self.face_t[f] = sub_space.face_t[f]
             self.face_type[f] = sub_space.face_type[f]
+            self.face_nodes[f] = sub_space.face_nodes[f]
 
-            for n in f:
+            for n in self.face_nodes[f]:
                 self.faces_containing[n].add(f)
 
     def to_dict(self, key_filter: typing.List[str] = None):
@@ -464,6 +465,9 @@ def generate_flat_spacetime(space_size: int, time_size: int):
             f2_t = (2 * index + 2 * space_size) % (2 * space_size * time_size)
             spacetime.face_t[f2] = f2_t
 
-            spacetime.faces_containing[index] = {f1, f2, f1_l, f2_l, f1_t, f2_t}
             index += 1
+    # if optimizing this is a good place to start
+    # This could be done directly, but at the moment it is error prone and this works
+    for n in spacetime.nodes:
+        spacetime.faces_containing[n] = {f for f in spacetime.faces if n in spacetime.face_nodes[f]}
     return spacetime

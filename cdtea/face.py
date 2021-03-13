@@ -13,7 +13,7 @@ class PassThruAttr:
 
 PASS_THRU_ATTR_MAP = {  # Mapping of attribute name in Node object and corresponding lookup-dict in SpaceTime object
     # NOTE: this depends on implementation details of SpaceTime class, and should be updated in tandem
-    PassThruAttr.Left: 'face_left', PassThruAttr.Right: 'face_right', PassThruAttr.Temporal: 'face_t', PassThruAttr.Type: 'face_type',PassThruAttr.Nodes: 'face_nodes'}
+    PassThruAttr.Left: 'face_left', PassThruAttr.Right: 'face_right', PassThruAttr.Temporal: 'face_t', PassThruAttr.Type: 'face_type', PassThruAttr.Nodes: 'face_nodes'}
 FACE_RETURNING_ATTRS = ('left', 'right', 'temporal')
 
 
@@ -24,23 +24,23 @@ class Face:
     SpaceTime object.
     """
 
-    def __init__(self, space_time, nodes):
+    def __init__(self, space_time, key):
         """Create a Face instance
 
         Args:
             space_time:
                 SpaceTime, the spacetime object
-            nodes:
+            key:
                 int, the Face label
         """
         self.space_time = space_time
-        if isinstance(nodes, Face):
+        if isinstance(key, Face):
             # TODO check space_time equivalence
-            nodes = nodes.key
+            key = key.key
         # Check that event exists in space_time (consistency)
-        if space_time.closed and nodes not in space_time.faces:
-            raise ValueError('Face Key {} not defined in spacetime: {}'.format(nodes, space_time))
-        self.key = nodes
+        if space_time.closed and key not in space_time.faces:
+            raise ValueError('Face Key {} not defined in spacetime: {}'.format(key, space_time))
+        self.key = key
 
     def __eq__(self, other):
         """Equality comparison operator
@@ -68,7 +68,7 @@ class Face:
         """Define convenient representation for events"""
         # TODO update this to use the SpaceTime repr, now it's just using STN
         # TODO update this to include a time coordinate if possible
-        return 'Face(ST{:d}, {:s})'.format(len(self.space_time.key), -1 if self.key is None else str(set(self.key)))
+        return 'Face(ST{:d}, {:s})'.format(len(self.space_time.nodes), -1 if self.key is None else str(self.key))
 
     def _get_pass_thru_attr_(self, key: str):
         """Helper private method for looking up pass-thru attributes.For these attributes only,
@@ -86,8 +86,8 @@ class Face:
             value = getattr(self.space_time, PASS_THRU_ATTR_MAP[key])[self.key]
             if key in FACE_RETURNING_ATTRS:
                 if isinstance(value, Iterable):
-                    return set([v if v is None else Face(space_time=self.space_time, nodes=v) for v in value])
-                return value if value is None else Face(space_time=self.space_time, nodes=value)
+                    return set([v if v is None else Face(space_time=self.space_time, key=v) for v in value])
+                return value if value is None else Face(space_time=self.space_time, key=value)
             return value
 
     @property
@@ -154,7 +154,7 @@ class Face:
         return {self.left, self.right}
 
 
-def faces(space_time, keys: typing.Union[frozenset, typing.Iterable[frozenset]] = None) -> typing.Union[Face, typing.List[Face]]:
+def faces(space_time, keys: typing.Union[int, typing.Iterable[int]] = None) -> typing.Union[Face, typing.List[Face]]:
     """Helper function for creating multiple Event instances from an iterable
     of SpaceTime keys
 
@@ -172,8 +172,8 @@ def faces(space_time, keys: typing.Union[frozenset, typing.Iterable[frozenset]] 
     if keys is None:
         keys = space_time.faces
     if isinstance(keys, Iterable):
-        return [Face(space_time=space_time, nodes=k) for k in keys]
-    return Face(space_time=space_time, nodes=keys)
+        return [Face(space_time=space_time, key=k) for k in keys]
+    return Face(space_time=space_time, key=keys)
 
 
 def connect_spatial(left: Face, right: Face):
@@ -182,7 +182,7 @@ def connect_spatial(left: Face, right: Face):
     Args:
         left:
             Face, the event to be on the left side of the spatial connection
-        left:
+        right:
             Face, the event to be on the right side of the spatial connection
 
     Notes:
