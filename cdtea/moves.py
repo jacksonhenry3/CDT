@@ -188,43 +188,44 @@ def new_increase(st, node, future, past):
     # sub_space.node_future[past].append(new_node)
 
     # face changes
+
     for f in face.faces(sub_space):
         if node_s.key in f.nodes:
-            if any(item.key in f.nodes for item in list(new_future_set | new_past_set)):
+            modified = [i.key for i in list(new_future_set | new_past_set | {node_s, left})]
+            if all(item in modified for item in f.nodes):
                 new_nodes = set(f.nodes)
                 new_nodes.remove(node_s.key)
                 new_nodes.add(new_s.key)
 
                 sub_space.face_nodes[f.key] = frozenset(new_nodes)
+                sub_space.faces_containing[node_s.key].remove(f.key)
+                sub_space.faces_containing[new_s.key].add(f.key)
 
-    f1 = face.Face(sub_space, sub_space.nodes_face[frozenset({new_s.key, right.key, future_s.key})])
-    f2 = face.Face(sub_space, sub_space.nodes_face[frozenset({new_s.key, right.key, past_s.key})])
-    sub_space.face_nodes[f1.key] = frozenset({node_s.key, right.key, future_s.key})
-    sub_space.face_nodes[f2.key] = frozenset({node_s.key, right.key, past_s.key})
+    f1r = face.Face(sub_space, (set(sub_space.faces_containing[new_s.key]) & set(sub_space.faces_containing[future_s.key])).pop())
+    f1l = face.Face(sub_space, (set(sub_space.faces_containing[node_s.key]) & set(sub_space.faces_containing[future_s.key])).pop())
+    f2r = face.Face(sub_space, (set(sub_space.faces_containing[new_s.key]) & set(sub_space.faces_containing[past_s.key])).pop())
+    f2l = face.Face(sub_space, (set(sub_space.faces_containing[node_s.key]) & set(sub_space.faces_containing[past_s.key])).pop())
 
     new_face_key = max(st.faces.union(sub_space.faces)) + 1
 
     f_new_1 = face.Face(sub_space, sub_space.add_face(frozenset({new_s.key, node_s.key, future_s.key}), new_face_key))
-    sub_space.face_type[f_new_1.key] = sub_space.face_type[f1.key]
-
+    sub_space.face_type[f_new_1.key] = 0
     f_new_2 = face.Face(sub_space, sub_space.add_face(frozenset({new_s.key, node_s.key, past_s.key}), new_face_key + 1))
+    sub_space.face_type[f_new_2.key] = 1
+    print(f_new_1, f1r)
+    print(f1l, f_new_1)
+    face.connect_spatial(f_new_1, f1r)
+    face.connect_spatial(f1l, f_new_1)
 
-    face.connect_spatial(f_new_1, f1.right)
-    face.connect_spatial(f1, f_new_1)
+    face.connect_spatial(f_new_2, f2r)
+    face.connect_spatial(f2l, f_new_2)
 
-    face.connect_spatial(f_new_2, f2.right)
-    face.connect_spatial(f2, f_new_2)
     #
     face.connect_temporal(f_new_1, f_new_2)
+    print(sub_space.face_left)
 
-    #
-    # for f in sub_space.faces:
-    #     for n in sub_space.face_nodes[f]:
-    #         print(n)
-    #         sub_space.faces_containing[n].add(f)
+    # print(f1l, f1r, f2l, f2r)
 
-    event.set_faces(new_s, [])
-    event.set_faces(node_s, [])
     st.push(sub_space)
 
 
