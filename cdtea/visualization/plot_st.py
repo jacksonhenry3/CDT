@@ -196,6 +196,7 @@ def plot_2d(st, offset=2 * pi / 600., get_coords=get_naive_coords, labels=False)
     face_left_connections = []
     face_time_connections = []
     for face in Face.faces(st):
+
         x, y = face_coordinate[face]
         x_r, y_r = face_coordinate[face.right]
         x_l, y_l = face_coordinate[face.left]

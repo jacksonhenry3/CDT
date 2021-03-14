@@ -91,7 +91,7 @@ def get_average_coords(st):
     theta_x, theta_t = get_naive_coords(st)
 
     for i in range(200):
-        print(i)
+        # print(i)
         for n in st.nodes:
             # print(n)
             # sums the x length of all connections to n

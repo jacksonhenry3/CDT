@@ -62,10 +62,11 @@ def increase(st, node, future, past):
     # face changes
 
     # remove old faces from faces_containing
-    for face in sub_space.faces:
-        if node_s.key in face:
-            for n in face:
-                sub_space.faces_containing[n].remove(face)
+    print(face.faces(sub_space))
+    for f in face.faces(sub_space):
+        if node_s.key in f.nodes:
+            for n in f.nodes:
+                sub_space.faces_containing[n].remove(f.key)
 
     # remove old faces
     sub_space.faces = []
@@ -123,76 +124,107 @@ def increase(st, node, future, past):
     sub_space.faces.append(frozenset({left.key, new_s.key, leftmost_past.key}))
     sub_space.face_dilaton[frozenset({left.key, new_s.key, leftmost_past.key})] = -1
 
-    for face in sub_space.faces:
-        for n in face:
-            sub_space.faces_containing[n].add(face)
+    for f in sub_space.faces:
+        for n in f:
+            sub_space.faces_containing[n].add(f)
 
     event.set_faces(new_s, [])
     event.set_faces(node_s, [])
     st.push(sub_space)
 
 
-def decrease(st, node):
-    """ merge two spatially adjacent nodes, always merges in one direction."""
-    left = node.left
-    sub_space = st.pop([node, left])
+def new_increase(st, node, future, past):
+    """
+    A move should add one node and 2 faces. we can pop all the structures to be modified out of the dicts and then push
+    them back in once they've been modified. This mean we need to know what could get modfified in any given move.
+    """
 
-    left_s = event.Event(sub_space, left.key)
-    node_s = event.Event(sub_space, node.key)
+    # remove the sub_space that is going to be modified
+    sub_space = st.pop([node])
+    future_s = event.Event(sub_space, future)  # Need these two because they have been "popped" out of the original spacetime
+    past_s = event.Event(sub_space, past)
 
-    new_future = set(left_s.future).union(node_s.future)
-    new_past = set(left_s.past).union(node_s.past)
-    new_left = left_s.left
+    # increment the total node counter
+    new_node_num = max(st.nodes.union(sub_space.nodes)) + 1
+    sub_space.add_key(new_node_num)
 
-    event.connect_spatial(new_left, node_s)
-    event.connect_temporal(node_s, past=new_past, future=new_future)
-    event.connect_temporal(left_s, past=set(), future=set())
+    # create a node object for easy manipulation. This also automatically adds the node to the sub_space
+    new_s = event.Event(sub_space, new_node_num)
+    node_s = event.Event(sub_space, node)
+    left_s = event.Event(sub_space, node_s.left)
+    left = node_s.left
+    right = node_s.right
 
-    faces = set(sub_space.faces_containing[left_s.key])
+    # spatial changes
+    event.connect_spatial(new_s, node_s)  # new_s.right = node_s and node_s.left = new_s
+    event.connect_spatial(left_s, new_s)  # new_s.left = left_s and left_s.right = new_s
 
-    # remove faces that involve the old node
+    # future changes
+    # TODO examine algorithm concept of connection vs Spacetime (e.g. after popping a node out, what does asking for "left" mean?)
+    new_future_set = {future_s}
+    f = future_s.left
 
-    for face in sub_space.faces:
+    while f in node_s.future and not f.is_gluing_point:
+        new_future_set.add(f)
+        sub_space.node_future[node.key].remove(f.key)  # TODO cleanup the event key coercion by figuring out workaround for node.future.remove()
+        sub_space.node_past[f.key].remove(node.key)
+        f = f.left
+    event.connect_temporal(new_s, future=new_future_set)
+    old_future_set = node_s.future.difference(new_future_set).union({future_s})
+    event.connect_temporal(node_s, future=old_future_set)
+    # sub_space.node_past[future].append(new_node)
 
-        if left_s.key in face:
-            for n in face:
-                sub_space.faces_containing[n].remove(face)
-    sub_space.remove_key(left_s.key)
-    face_map = {f: f for f in st.faces | set(sub_space.faces)}
-    sub_space.faces = {x for x in sub_space.faces if x not in faces}
+    # past changes
+    new_past_set = {past_s}
+    p = past_s.left
+    while p in node_s.past:
+        new_past_set.add(p)
+        sub_space.node_past[node_s.key].remove(p.key)
+        sub_space.node_future[p.key].remove(node_s.key)
+        p = p.left
+    event.connect_temporal(new_s, past=new_past_set)
+    old_past_set = node_s.past.difference(new_past_set).union({past_s})
+    event.connect_temporal(node_s, past=old_past_set)
+    # sub_space.node_future[past].append(new_node)
 
-    new_faces = []
-    old_faces = []
+    # face changes
+    for f in face.faces(sub_space):
+        if node_s.key in f.nodes:
+            if any(item.key in f.nodes for item in list(new_future_set | new_past_set)):
+                new_nodes = set(f.nodes)
+                new_nodes.remove(node_s.key)
+                new_nodes.add(new_s.key)
 
-    for face in faces:
-        new_face = []
-        if node.key not in face:
-            for n in face:
-                if n == left_s.key:
-                    n = node.key
-                new_face.append(n)
+                sub_space.face_nodes[f.key] = frozenset(new_nodes)
 
-            f = frozenset(new_face)
-            new_faces.append(frozenset(new_face))
-            old_faces.append(face)
-            face_map[face] = f
+    f1 = face.Face(sub_space, sub_space.nodes_face[frozenset({new_s.key, right.key, future_s.key})])
+    f2 = face.Face(sub_space, sub_space.nodes_face[frozenset({new_s.key, right.key, past_s.key})])
+    sub_space.face_nodes[f1.key] = frozenset({node_s.key, right.key, future_s.key})
+    sub_space.face_nodes[f2.key] = frozenset({node_s.key, right.key, past_s.key})
 
-    for i, new_face in enumerate(new_faces):
-        old_face = old_faces[i]
+    new_face_key = max(st.faces.union(sub_space.faces)) + 1
 
-        sub_space.faces.add(new_face)
+    f_new_1 = face.Face(sub_space, sub_space.add_face(frozenset({new_s.key, node_s.key, future_s.key}), new_face_key))
+    sub_space.face_type[f_new_1.key] = sub_space.face_type[f1.key]
 
-        sub_space.face_left[new_face] = face_map[sub_space.face_left[old_face]]
-        sub_space.face_right[new_face] = face_map[sub_space.face_right[old_face]]
+    f_new_2 = face.Face(sub_space, sub_space.add_face(frozenset({new_s.key, node_s.key, past_s.key}), new_face_key + 1))
 
-        sub_space.face_t[new_face] = face_map[sub_space.face_t[old_face]]
-        sub_space.face_type[new_face] = sub_space.face_type[old_face]
-        sub_space.face_dilaton[new_face] = -1
+    face.connect_spatial(f_new_1, f1.right)
+    face.connect_spatial(f1, f_new_1)
 
-    for face in sub_space.faces:
-        for n in face:
-            sub_space.faces_containing[n].add(face)
+    face.connect_spatial(f_new_2, f2.right)
+    face.connect_spatial(f2, f_new_2)
+    #
+    face.connect_temporal(f_new_1, f_new_2)
 
+    #
+    # for f in sub_space.faces:
+    #     for n in sub_space.face_nodes[f]:
+    #         print(n)
+    #         sub_space.faces_containing[n].add(f)
+
+    event.set_faces(new_s, [])
+    event.set_faces(node_s, [])
     st.push(sub_space)
 
 
@@ -231,21 +263,16 @@ def decrease(st, node):
                 faces_containing_left.append(f)
 
     for f in face.faces(sub_space, faces_containing_left):
-
         new_f_nodes = set(f.nodes)
         new_f_nodes.remove(left_s.key)
         new_f_nodes.add(node_s.key)
-        new_f_nodes = frozenset(new_f_nodes)
 
-        sub_space.face_nodes[f.key] = new_f_nodes
-
+        sub_space.face_nodes[f.key] = frozenset(new_f_nodes)
 
     # connect the newly adjacent faces and remove the old face that used to be between them
-    # print(faces_for_deletion)
     for f in face.faces(sub_space, faces_for_deletion):
         face.connect_spatial(f.left, f.right)
         sub_space.remove_face(f.key)
-
 
     sub_space.remove_key(left_s.key)
 

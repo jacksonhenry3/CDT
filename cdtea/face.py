@@ -229,13 +229,13 @@ def connect_temporal(present: Face, t: Face):
     # Set left.right = right
     if present.temporal_neighbor != t:
         original_t_of_present = present.temporal_neighbor
-        getattr(present.space_time, PASS_THRU_ATTR_MAP[PassThruAttr.Right])[present.key] = t.key
+        getattr(present.space_time, PASS_THRU_ATTR_MAP[PassThruAttr.Temporal])[present.key] = t.key
         if original_t_of_present is not None:
-            getattr(original_t_of_present.space_time, PASS_THRU_ATTR_MAP[PassThruAttr.Left])[original_t_of_present.key] = None
+            getattr(original_t_of_present.space_time, PASS_THRU_ATTR_MAP[PassThruAttr.Temporal])[original_t_of_present.key] = None
 
     # Set t.present = present
     if t.temporal_neighbor != present:
         original_present_of_t = t.temporal_neighbor
-        getattr(t.space_time, PASS_THRU_ATTR_MAP[PassThruAttr.Left])[t.key] = present.key
+        getattr(t.space_time, PASS_THRU_ATTR_MAP[PassThruAttr.Temporal])[t.key] = present.key
         if original_present_of_t is not None:
-            getattr(original_present_of_t.space_time, PASS_THRU_ATTR_MAP[PassThruAttr.Right])[original_present_of_t.key] = None
+            getattr(original_present_of_t.space_time, PASS_THRU_ATTR_MAP[PassThruAttr.Temporal])[original_present_of_t.key] = None
