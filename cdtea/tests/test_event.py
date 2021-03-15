@@ -134,12 +134,11 @@ class TestEdgeConsistency:
     def test_set_faces(self):
         dst = space_time.generate_flat_spacetime(2, 2)
         e0, e1, e2, e3 = event.events(dst)
+        print(e0.faces)
 
-        assert e0.faces == {frozenset({0, 1, 3}),
-                            frozenset({0, 2, 3}),
-                            frozenset({0, 1, 2})}
-        event.set_faces(e0, [frozenset({0, 1, 3})])
-        assert e0.faces == {frozenset({0, 1, 3})}
+        assert e0.faces == {0, 1, 2, 5, 6, 7}
+        event.set_faces(e0, [2])
+        assert e0.faces == {2}
 
     def test_temporal_connection_unique(self):
         assert {4, 4} == {4}  # This is how sets remove dups

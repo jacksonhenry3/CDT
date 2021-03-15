@@ -204,19 +204,19 @@ def plot_2d(st, offset=2 * pi / 600., get_coords=get_naive_coords, labels=False)
 
         # right
         if face_is_display[face] and face_is_display[face.right]:
-            if abs(y - y_r) < 1:
-                if abs(x - x_r) < 1:
+            if abs(y - y_r) < 10:
+                if abs(x - x_r) < 10:
                     face_right_connections.append([(x, y-offset), (x_r, y_r-offset), ])
         # left
         if face_is_display[face] and face_is_display[face.left]:
-            if abs(y - y_l) < 1:
-                if abs(x - x_l) < 1:
+            if abs(y - y_l) < 10:
+                if abs(x - x_l) < 10:
                     face_left_connections.append([(x, y+offset), (x_l, y_l+offset), ])
 
         # temporal
         if face_is_display[face] and face_is_display[face.temporal_neighbor]:
-            if abs(y - y_t) < 1:
-                if abs(x - x_t) < 1:
+            if abs(y - y_t) < 10:
+                if abs(x - x_t) < 10:
                     if face.type == 0:
                         face_time_connections.append([(x+offset/2., y), (x_t+offset/2., y_t), ])
                     else:

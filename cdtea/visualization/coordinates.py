@@ -56,7 +56,7 @@ def get_naive_coords(st):
         N = len(layer)
         slot_width = 2 * pi / N
         for x, n in enumerate(layer):
-            theta_x[n] = ((x + t / 2.) * slot_width) % (2 * pi)
+            theta_x[n] = 2 * pi- ((x + t / 2.) * slot_width) % (2 * pi)
             theta_t[n] = t / T * 2 * pi
 
     return theta_x, theta_t

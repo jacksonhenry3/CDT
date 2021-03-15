@@ -448,15 +448,15 @@ def generate_flat_spacetime(space_size: int, time_size: int):
             spacetime.face_dilaton[f2] = -1
 
             # This defines the two spatialy adjacent simplices to f1
-            f1_l = 2 * start + (2 * index + 3) % (2 * space_size)
-            f1_r = f2
+            f1_r = 2 * start + (2 * index + 3) % (2 * space_size)
+            f1_l = f2
 
             spacetime.face_left[f1] = f1_l
             spacetime.face_right[f1] = f1_r
 
             # This defines the two spatially adjacent simplices to f2
-            f2_l = f1
-            f2_r = 2 * start + (2 * index - 2) % (2 * space_size)
+            f2_r = f1
+            f2_l = 2 * start + (2 * index - 2) % (2 * space_size)
             spacetime.face_left[f2] = f2_l
             spacetime.face_right[f2] = f2_r
 

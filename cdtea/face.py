@@ -68,7 +68,7 @@ class Face:
         """Define convenient representation for events"""
         # TODO update this to use the SpaceTime repr, now it's just using STN
         # TODO update this to include a time coordinate if possible
-        return 'Face(ST{:d}, {:s}, {})'.format(len(self.space_time.nodes), -1 if self.key is None else str(self.key), self.nodes)
+        return 'Face(ST{:d}, {:s}, {})'.format(len(self.space_time.nodes), -1 if self.key is None else str(self.key), set(self.nodes))
 
     def _get_pass_thru_attr_(self, key: str):
         """Helper private method for looking up pass-thru attributes.For these attributes only,
