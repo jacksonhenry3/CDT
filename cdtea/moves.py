@@ -84,8 +84,6 @@ def increase(st, node, future, past):
     sub_space.face_type[f_new_1.key] = 0
     f_new_2 = face.Face(sub_space, sub_space.add_face(frozenset({new_s.key, node_s.key, past_s.key}), new_face_key + 1))
     sub_space.face_type[f_new_2.key] = 1
-    print(f_new_1, f1r)
-    print(f1l, f_new_1)
     face.connect_spatial(f1r, f_new_1)
     face.connect_spatial(f_new_1, f1l)
 
@@ -94,9 +92,6 @@ def increase(st, node, future, past):
 
     #
     face.connect_temporal(f_new_1, f_new_2)
-    print(sub_space.face_left)
-
-    # print(f1l, f1r, f2l, f2r)
 
     st.push(sub_space)
 
