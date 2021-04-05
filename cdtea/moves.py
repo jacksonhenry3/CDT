@@ -12,13 +12,14 @@ def increase(st, node, future, past):
     """
 
     # remove the sub_space that is going to be modified
+    layer = node.layer
     sub_space = st.pop([node])
     future_s = event.Event(sub_space, future)  # Need these two because they have been "popped" out of the original spacetime
     past_s = event.Event(sub_space, past)
 
     # increment the total node counter
     new_node_num = max(st.nodes.union(sub_space.nodes)) + 1
-    sub_space.add_key(new_node_num)
+    sub_space.add_key(new_node_num, layer=layer)
 
     # create a node object for easy manipulation. This also automatically adds the node to the sub_space
     new_s = event.Event(sub_space, new_node_num)
