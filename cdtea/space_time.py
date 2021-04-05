@@ -28,19 +28,15 @@ class SpaceTime(object):
     linear manifold represented by the SpaceTime.
     """
     _NON_SERIALIZABLE_ATTRIBUTES = ('_ordered_nodes',)
-    _SERIALIZABLE_ATTRIBUTES = (
-        'closed', 'nodes', 'node_left', 'node_right', 'node_past', 'node_future', 'faces_containing', 'faces', 'face_dilaton', 'face_left', 'face_right', 'face_t', 'face_type',
-        'face_nodes')
-    _GEOMETRIC_ATTRIBUTES = (
-        'nodes', 'node_left', 'node_right', 'node_past', 'node_future', 'faces_containing', 'faces', 'face_left', 'face_right', 'face_t', 'face_type', 'face_nodes')
+    _SERIALIZABLE_ATTRIBUTES = ('closed', 'nodes', 'node_left', 'node_right', 'node_past', 'node_future', 'faces_containing', 'faces',
+                                'face_dilaton', 'face_left', 'face_right', 'face_t', 'face_type', 'face_nodes', 'node_layer')
+    _GEOMETRIC_ATTRIBUTES = ('nodes', 'node_left', 'node_right', 'node_past', 'node_future', 'faces_containing',
+                             'faces', 'face_left', 'face_right', 'face_t', 'face_type', 'face_nodes')
     __slots__ = _NON_SERIALIZABLE_ATTRIBUTES + _SERIALIZABLE_ATTRIBUTES
 
-    def __init__(self, nodes: set = None, node_left: dict = None, node_right: dict = None, node_past: dict = None, node_future: dict = None,
-
-                 faces_containing: dict = None,
-
-                 faces: set = None, face_dilaton: dict = None, face_left: dict = None, face_right: dict = None, face_t: dict = None, face_type: dict = None, closed: bool = True,
-                 face_nodes: dict = None):
+    def __init__(self, nodes: set = None, node_left: dict = None, node_right: dict = None, node_past: dict = None, node_future: dict = None, node_layer: dict = None,
+                 faces_containing: dict = None, faces: set = None, face_dilaton: dict = None, face_left: dict = None, face_right: dict = None, face_t: dict = None,
+                 face_type: dict = None, closed: bool = True, face_nodes: dict = None):
         super(SpaceTime, self).__init__()
         self.closed = closed
 
@@ -50,6 +46,7 @@ class SpaceTime(object):
         self.node_right = {} if node_right is None else node_right  # a dict with node indices as keys
         self.node_past = {} if node_past is None else node_past  # a dict with node indices as keys
         self.node_future = {} if node_future is None else node_future  # a dict with node indices as keys
+        self.node_layer = {}
         self.faces_containing = {} if faces_containing is None else faces_containing
 
         self.faces = set() if faces is None else faces  # faces is a set of indicies
@@ -128,6 +125,9 @@ class SpaceTime(object):
 
     def get_layers(self, n=False):
         """returns a list of lists where each list contains all nodes in a specific layer, contains all nodes """
+        layers = {}
+        for n, l in self.node_layer.items():
+            layers[l] = {n} if l not in layers else layers[l] + [n]
         if not n:
             n = self.ordered_nodes[0]
         used = []
