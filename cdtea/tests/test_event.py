@@ -85,6 +85,12 @@ class TestEvent:
         assert e1.is_gluing_point
         assert not e2.is_gluing_point
 
+    def test_layer(self):
+        dst = space_time.generate_flat_spacetime(2, 2)
+        e1 = event.Event(dst, event.GluingPoint(0))
+        assert isinstance(e1.layer, int)
+        assert e1.layer == 0
+
 
 class TestEdgeConsistency:
     """Test Edge Consistency Rules"""
