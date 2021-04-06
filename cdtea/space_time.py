@@ -28,19 +28,15 @@ class SpaceTime(object):
     linear manifold represented by the SpaceTime.
     """
     _NON_SERIALIZABLE_ATTRIBUTES = ('_ordered_nodes',)
-    _SERIALIZABLE_ATTRIBUTES = (
-        'closed', 'nodes', 'node_left', 'node_right', 'node_past', 'node_future', 'faces_containing', 'faces', 'face_dilaton', 'face_left', 'face_right', 'face_t', 'face_type',
-        'face_nodes')
-    _GEOMETRIC_ATTRIBUTES = (
-        'nodes', 'node_left', 'node_right', 'node_past', 'node_future', 'faces_containing', 'faces', 'face_left', 'face_right', 'face_t', 'face_type', 'face_nodes')
+    _SERIALIZABLE_ATTRIBUTES = ('closed', 'nodes', 'node_left', 'node_right', 'node_past', 'node_future', 'faces_containing', 'faces',
+                                'face_dilaton', 'face_left', 'face_right', 'face_t', 'face_type', 'face_nodes', 'node_layer')
+    _GEOMETRIC_ATTRIBUTES = ('nodes', 'node_left', 'node_right', 'node_past', 'node_future', 'faces_containing',
+                             'faces', 'face_left', 'face_right', 'face_t', 'face_type', 'face_nodes')
     __slots__ = _NON_SERIALIZABLE_ATTRIBUTES + _SERIALIZABLE_ATTRIBUTES
 
-    def __init__(self, nodes: set = None, node_left: dict = None, node_right: dict = None, node_past: dict = None, node_future: dict = None,
-
-                 faces_containing: dict = None,
-
-                 faces: set = None, face_dilaton: dict = None, face_left: dict = None, face_right: dict = None, face_t: dict = None, face_type: dict = None, closed: bool = True,
-                 face_nodes: dict = None):
+    def __init__(self, nodes: set = None, node_left: dict = None, node_right: dict = None, node_past: dict = None, node_future: dict = None, node_layer: dict = None,
+                 faces_containing: dict = None, faces: set = None, face_dilaton: dict = None, face_left: dict = None, face_right: dict = None, face_t: dict = None,
+                 face_type: dict = None, closed: bool = True, face_nodes: dict = None):
         super(SpaceTime, self).__init__()
         self.closed = closed
 
@@ -50,6 +46,7 @@ class SpaceTime(object):
         self.node_right = {} if node_right is None else node_right  # a dict with node indices as keys
         self.node_past = {} if node_past is None else node_past  # a dict with node indices as keys
         self.node_future = {} if node_future is None else node_future  # a dict with node indices as keys
+        self.node_layer = {} if node_layer is None else node_layer # a dict node indices tracking spatial layer
         self.faces_containing = {} if faces_containing is None else faces_containing
 
         self.faces = set() if faces is None else faces  # faces is a set of indicies
@@ -126,24 +123,21 @@ class SpaceTime(object):
     def get_random_node(self):
         return event.Event(self, random.choice(self.ordered_nodes))
 
-    def get_layers(self, n=False):
-        """returns a list of lists where each list contains all nodes in a specific layer, contains all nodes """
-        if not n:
-            n = self.ordered_nodes[0]
-        used = []
-        layers = []
-        layer = []
-        while n not in used:
-            layer.append(n)
-            used.append(n)
-            n = self.node_left[n]
-            if n in used:
-                layers.append(layer)
-                layer = []
-                n = list(sorted(self.node_future[n]))[0]
+    def get_layers(self):
+        """Collect nodes using temporal slice (spatial layer) as an equivalence class
+
+        Returns:
+            dict[int, set[int]], a dictionary keyed by layer number and valued by sets of layer constituents
+        """
+        layers = {}
+        for n, l in self.node_layer.items():
+            if l not in layers:
+                layers[l] = {n}
+            else:
+                layers[l].add(n)
         return layers
 
-    def add_key(self, key: int = None):
+    def add_key(self, key: int = None, layer: int = None):
         """Function for keeping consistency across various lookup dict keys and nodes list"""
         if key is None:
             key = self.max_node + 1
@@ -156,6 +150,7 @@ class SpaceTime(object):
         self.node_future[key] = set()
         self.node_past[key] = set()
         self.faces_containing[key] = set()
+        self.node_layer[key] = layer
         self._ordered_nodes = None
 
     def remove_key(self, key: int):
@@ -166,6 +161,7 @@ class SpaceTime(object):
         self.node_future.pop(key)
         self.node_past.pop(key)
         self.faces_containing.pop(key)
+        self.node_layer.pop(key)
         self._ordered_nodes = None
 
     def add_face(self, nodes: frozenset = None, key: int = None):
@@ -213,7 +209,7 @@ class SpaceTime(object):
 
         # set the sub_space nodes and faces
         for n in nodes:
-            sub_space.add_key(key=n.key)
+            sub_space.add_key(key=n.key, layer=n.layer)
         sub_space.faces = set(faces.copy())
         sub_space.faces_containing = {n: self.faces_containing[n] for n in sub_space.nodes}
 
@@ -256,7 +252,7 @@ class SpaceTime(object):
         faces = sub_space.faces
 
         for s in nodes:
-            self.add_key(s)
+            self.add_key(s, layer=sub_space.node_layer[s])
 
         # Replicate the interior structure from the subspace in the superspace (not gluing)
         # This step will also add edges that reference "gluing points", however, since
@@ -333,14 +329,13 @@ class SpaceTime(object):
         """
         # Construct initial graph
         layers = self.get_layers()
-        G = networkx.Graph(num_layers=len(layers))
+        G = networkx.Graph(num_layers=len(layers.keys()))
         G.add_nodes_from(self.ordered_nodes)
 
         # Add information about node layers
         layers_dict = {}
-        for n, layer in enumerate(layers):
-            for node in layer:
-                layers_dict[node] = {'layer': n}
+        for n, layer in self.node_layer.items():
+            layers_dict[n] = {'layer': n}
         networkx.set_node_attributes(G, layers_dict)
 
         # Add information about edge types
@@ -409,7 +404,7 @@ def generate_flat_spacetime(space_size: int, time_size: int):
     for t in range(time_size):
         start = index  # the first index in the current time slice
         for x in range(space_size):
-            spacetime.add_key(index)
+            spacetime.add_key(index, layer=t)
 
             left = start + (index - 1) % space_size
             right = start + (index + 1) % space_size

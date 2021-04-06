@@ -14,6 +14,7 @@ class PassThruAttr:
     Past = 'past'
     Future = 'future'
     Faces = 'faces'
+    Layer = 'layer'
 
 
 PASS_THRU_ATTR_MAP = {
@@ -23,7 +24,8 @@ PASS_THRU_ATTR_MAP = {
     PassThruAttr.Right: 'node_right',
     PassThruAttr.Past: 'node_past',
     PassThruAttr.Future: 'node_future',
-    PassThruAttr.Faces: 'faces_containing'
+    PassThruAttr.Faces: 'faces_containing',
+    PassThruAttr.Layer: 'node_layer',
 }
 EVENT_RETURNING_ATTRS = ('left', 'right', 'past', 'future')
 EDGE_CONSISTENCY_ATTR_DUALS = [
@@ -134,6 +136,15 @@ class Event:
             bool, True if this event represents a gluing point, False otherwise.
         """
         return isinstance(self.key, GluingPoint)
+
+    @property
+    def layer(self):
+        """Pass-thru accessor for node layer
+
+        Returns:
+            int, the node layer
+        """
+        return self._get_pass_thru_attr_(PassThruAttr.Layer)
 
     @property
     def left(self):
